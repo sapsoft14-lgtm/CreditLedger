@@ -1,0 +1,1487 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>SAP Creditors - Ledger</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@500;600;700&family=Inter:wght@400;500;600&family=IBM+Plex+Mono:wght@500;600&display=swap" rel="stylesheet">
+  <style>
+    :root{
+      --ink:#1C2333;
+      --paper:#F5F6F1;
+      --surface:#FFFFFF;
+      --line:#DDE0E3;
+      --muted:#6B7280;
+      --teal:#1B8A6B;
+      --teal-bg:#E6F3EF;
+      --amber:#C98A2C;
+      --amber-bg:#FBF0DE;
+      --rust:#B84C3E;
+      --rust-bg:#F9E7E4;
+      --navy:#2B4C7E;
+      --navy-dark:#1F3A63;
+      --radius:10px;
+      --bar-bg:#1C2333;
+      --bar-text:#FFFFFF;
+      --table-head-bg:#FAFAF8;
+      --row-hover:#FCFCFA;
+      --overlay-bg:rgba(28,35,51,.45);
+      --shadow-color:rgba(0,0,0,.25);
+      --active-chip-bg:#1C2333;
+      --active-chip-text:#FFFFFF;
+    }
+    [data-theme="dark"]{
+      --ink:#E7E9F1;
+      --paper:#11141C;
+      --surface:#1A1E2A;
+      --line:#2D3242;
+      --muted:#9096A8;
+      --teal:#3FCBA0;
+      --teal-bg:rgba(63,203,160,.14);
+      --amber:#E5AE58;
+      --amber-bg:rgba(229,174,88,.14);
+      --rust:#E37568;
+      --rust-bg:rgba(227,117,104,.14);
+      --navy:#6C93DB;
+      --navy-dark:#5379C0;
+      --bar-bg:#0B0D14;
+      --bar-text:#FFFFFF;
+      --table-head-bg:#1F2330;
+      --row-hover:#20242F;
+      --overlay-bg:rgba(4,6,12,.6);
+      --shadow-color:rgba(0,0,0,.55);
+      --active-chip-bg:#EDEFF5;
+      --active-chip-text:#12151F;
+    }
+    body{transition:background-color .15s ease, color .15s ease;}
+    *{box-sizing:border-box;}
+    html,body{margin:0;padding:0;}
+    body{
+      background:var(--paper);
+      color:var(--ink);
+      font-family:'Inter',system-ui,sans-serif;
+      -webkit-font-smoothing:antialiased;
+    }
+    .mono{font-family:'IBM Plex Mono',monospace;}
+    .display{font-family:'Space Grotesk',sans-serif;}
+
+    /* ---------- Top bar ---------- */
+    .topbar{
+      display:flex;align-items:center;justify-content:space-between;
+      padding:18px 28px;background:var(--bar-bg);color:var(--bar-text);
+      position:sticky;top:0;z-index:20;
+    }
+    .brand{display:flex;align-items:center;gap:12px;}
+    .brand-mark{
+      width:36px;height:36px;border-radius:8px;
+      background:linear-gradient(155deg,var(--navy),var(--navy-dark));
+      display:flex;align-items:center;justify-content:center;
+      font-family:'Space Grotesk',sans-serif;font-weight:700;font-size:14px;letter-spacing:.5px;
+      flex-shrink:0;
+    }
+    .brand-text h1{margin:0;font-family:'Space Grotesk',sans-serif;font-size:17px;font-weight:600;letter-spacing:.2px;}
+    .brand-text p{margin:1px 0 0;font-size:11.5px;color:#9AA3B5;letter-spacing:.3px;}
+    .topbar-actions{display:flex;align-items:center;gap:8px;}
+    .btn{
+      border:none;border-radius:8px;padding:10px 16px;font-size:13.5px;font-weight:600;
+      cursor:pointer;font-family:'Inter',sans-serif;display:inline-flex;align-items:center;gap:6px;
+      transition:transform .12s ease, box-shadow .12s ease, opacity .12s ease;
+    }
+    .btn:active{transform:translateY(1px);}
+    .btn-primary{background:var(--navy);color:#fff;}
+    .btn-primary:hover{background:var(--navy-dark);}
+    .btn-ghost{background:transparent;color:var(--ink);border:1px solid var(--line);}
+    .btn-ghost:hover{background:var(--paper);}
+    .btn-ghost-light{background:rgba(255,255,255,.08);color:#fff;border:1px solid rgba(255,255,255,.18);}
+    .btn-ghost-light:hover{background:rgba(255,255,255,.15);}
+    .btn-icon-only{padding:9px;border-radius:8px;}
+    .btn-sm{padding:6px 10px;font-size:12px;border-radius:6px;}
+    .btn:disabled{opacity:.5;cursor:default;}
+
+    /* ---------- Layout ---------- */
+    .wrap{max-width:1240px;margin:0 auto;padding:24px 28px 60px;}
+
+    /* ---------- Config banner ---------- */
+    .config-banner{
+      background:var(--amber-bg);border:1px solid #EFD8AE;color:#7A5314;
+      border-radius:var(--radius);padding:14px 18px;margin-bottom:20px;
+      display:none;align-items:center;gap:12px;font-size:13px;
+    }
+    .config-banner.show{display:flex;}
+    .config-banner .btn{flex-shrink:0;}
+
+    /* ---------- Stat stubs ---------- */
+    .stats-head{display:flex;align-items:center;gap:10px;margin-bottom:10px;}
+    .stats-title{font-family:'Space Grotesk',sans-serif;font-size:13px;font-weight:600;color:var(--muted);text-transform:uppercase;letter-spacing:.5px;}
+    .stats-badge{
+      display:none;align-items:center;gap:5px;background:var(--navy);color:#fff;border-radius:20px;
+      padding:3px 10px;font-size:10.5px;font-weight:600;letter-spacing:.2px;
+    }
+    .stats{display:grid;grid-template-columns:repeat(4,1fr);gap:16px;margin-bottom:26px;}
+    .stub{
+      background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);
+      padding:16px 18px 14px;position:relative;overflow:hidden;
+    }
+    .stub::before{
+      content:"";position:absolute;top:0;left:0;right:0;height:4px;
+    }
+    .stub.total::before{background:var(--navy);}
+    .stub.paid::before{background:var(--teal);}
+    .stub.outstanding::before{background:var(--rust);}
+    .stub.count::before{background:var(--amber);}
+    .stub .stub-label{font-size:11px;text-transform:uppercase;letter-spacing:.6px;color:var(--muted);font-weight:600;}
+    .stub .stub-value{font-family:'IBM Plex Mono',monospace;font-size:24px;font-weight:600;margin-top:8px;letter-spacing:-.3px;}
+    .stub .stub-sub{font-size:11px;color:var(--muted);margin-top:4px;}
+
+    /* ---------- Toolbar ---------- */
+    .toolbar{
+      display:flex;align-items:center;gap:10px;margin-bottom:16px;flex-wrap:wrap;
+    }
+    .search-box{
+      flex:1;min-width:220px;display:flex;align-items:center;gap:8px;
+      background:var(--surface);border:1px solid var(--line);border-radius:8px;padding:9px 12px;
+    }
+    .search-box input{border:none;outline:none;font-size:13.5px;flex:1;background:transparent;color:var(--ink);}
+    .search-box svg{flex-shrink:0;opacity:.5;}
+    .chips{display:flex;gap:6px;}
+    .chip{
+      border:1px solid var(--line);background:var(--surface);border-radius:20px;padding:8px 14px;
+      font-size:12.5px;font-weight:600;cursor:pointer;color:var(--muted);white-space:nowrap;
+    }
+    .chip.active{background:var(--active-chip-bg);color:var(--active-chip-text);border-color:var(--active-chip-bg);}
+
+    .creditor-select{
+      border:1px solid var(--line);background:var(--surface);border-radius:8px;padding:9px 12px;
+      font-size:13px;font-family:'Inter',sans-serif;color:var(--ink);cursor:pointer;min-width:170px;
+    }
+    .toggle-inline{
+      display:flex;align-items:center;gap:7px;font-size:12.5px;font-weight:600;color:var(--muted);
+      cursor:pointer;white-space:nowrap;user-select:none;
+    }
+    .toggle-inline input{width:15px;height:15px;accent-color:var(--navy);cursor:pointer;}
+    .toggle-inline.active{color:var(--ink);}
+
+    /* ---------- Table ---------- */
+    .table-card{background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);overflow:hidden;}
+    table{width:100%;border-collapse:collapse;}
+    thead th{
+      text-align:left;font-size:10.5px;text-transform:uppercase;letter-spacing:.5px;
+      color:var(--muted);font-weight:600;padding:12px 14px;border-bottom:1px solid var(--line);
+      background:var(--table-head-bg);white-space:nowrap;
+    }
+    thead th.num, tbody td.num{text-align:right;}
+    tbody td{padding:13px 14px;font-size:13px;border-bottom:1px solid var(--line);vertical-align:middle;}
+    tbody tr:last-child td{border-bottom:none;}
+    tbody tr:hover{background:var(--row-hover);}
+    .creditor-cell{font-weight:600;}
+    .desc-cell{color:var(--muted);max-width:220px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;}
+    .amt-block{display:flex;flex-direction:column;align-items:flex-end;gap:5px;min-width:100px;}
+    .meter{width:100%;height:4px;border-radius:2px;background:var(--line);overflow:hidden;}
+    .meter-fill{height:100%;border-radius:2px;}
+    .status-pill{
+      display:inline-flex;align-items:center;gap:6px;padding:4px 10px;border-radius:20px;
+      font-size:11px;font-weight:600;white-space:nowrap;
+    }
+    .status-dot{width:6px;height:6px;border-radius:50%;}
+    .status-paid{background:var(--teal-bg);color:var(--teal);}
+    .status-paid .status-dot{background:var(--teal);}
+    .status-partial{background:var(--amber-bg);color:var(--amber);}
+    .status-partial .status-dot{background:var(--amber);}
+    .status-unpaid{background:var(--rust-bg);color:var(--rust);}
+    .status-unpaid .status-dot{background:var(--rust);}
+    .row-actions{display:flex;gap:6px;justify-content:flex-end;}
+    .icon-btn{
+      border:1px solid var(--line);background:var(--surface);border-radius:6px;width:28px;height:28px;
+      display:inline-flex;align-items:center;justify-content:center;cursor:pointer;color:var(--muted);
+    }
+    .icon-btn:hover{color:var(--ink);background:var(--paper);}
+    .icon-btn.pay-btn:hover{color:var(--teal);border-color:var(--teal);}
+    .icon-btn.del-btn:hover{color:var(--rust);border-color:var(--rust);}
+
+    /* ---------- Collapsed customer rows ---------- */
+    .customer-row td{font-weight:600;}
+    .customer-row .creditor-cell{display:flex;align-items:center;gap:8px;}
+    .customer-row.expanded{background:var(--table-head-bg);}
+    .expand-btn{
+      background:none;border:none;cursor:pointer;color:var(--muted);padding:3px;
+      display:inline-flex;align-items:center;justify-content:center;border-radius:5px;flex-shrink:0;
+    }
+    .expand-btn:hover{background:var(--paper);color:var(--ink);}
+    .detail-row{background:var(--row-hover);}
+    .detail-row td{font-weight:400;}
+    .detail-row .creditor-cell{font-weight:400;}
+    .detail-row .connector{color:var(--muted);opacity:.6;font-size:13px;padding-left:8px;}
+    @media (max-width:760px){
+      .detail-row{border-left:3px solid var(--line);}
+      .detail-row .creditor-cell::before{content:none;}
+    }
+
+    .empty-state{padding:60px 20px;text-align:center;color:var(--muted);}
+    .empty-state h3{font-family:'Space Grotesk',sans-serif;color:var(--ink);margin:12px 0 4px;font-size:16px;}
+    .empty-state p{font-size:13px;margin:0;}
+
+    /* ---------- Modal ---------- */
+    .overlay{
+      position:fixed;inset:0;background:var(--overlay-bg);display:none;
+      align-items:center;justify-content:center;z-index:50;padding:20px;
+    }
+    .overlay.show{display:flex;}
+    .modal{
+      background:var(--surface);border-radius:14px;width:100%;max-width:520px;
+      max-height:90vh;overflow-y:auto;box-shadow:0 20px 60px var(--shadow-color);
+    }
+    .modal-sm{max-width:400px;}
+    .modal-head{display:flex;align-items:center;justify-content:space-between;padding:20px 22px 14px;border-bottom:1px solid var(--line);}
+    .modal-head h2{margin:0;font-family:'Space Grotesk',sans-serif;font-size:17px;font-weight:600;}
+    .modal-close{background:none;border:none;font-size:20px;cursor:pointer;color:var(--muted);line-height:1;}
+    .modal-body{padding:20px 22px;}
+    .modal-foot{padding:16px 22px 22px;display:flex;gap:10px;justify-content:flex-end;}
+    .field{margin-bottom:14px;}
+    .field label{display:block;font-size:12px;font-weight:600;color:var(--muted);margin-bottom:6px;}
+    .field input, .field textarea{
+      width:100%;border:1px solid var(--line);border-radius:8px;padding:9px 11px;font-size:13.5px;
+      font-family:'Inter',sans-serif;color:var(--ink);outline:none;background:var(--surface);
+    }
+    .field input:focus, .field textarea:focus{border-color:var(--navy);}
+    .field-row{display:grid;grid-template-columns:1fr 1fr;gap:12px;}
+    .helper{font-size:11px;color:var(--muted);margin-top:4px;}
+    .helper a{color:var(--navy);}
+    .pay-summary{
+      background:var(--paper);border-radius:8px;padding:14px;margin-bottom:16px;display:flex;justify-content:space-between;
+    }
+    .pay-summary div span{display:block;}
+    .pay-summary .label{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.4px;}
+    .pay-summary .val{font-family:'IBM Plex Mono',monospace;font-size:16px;font-weight:600;margin-top:3px;}
+
+    /* ---------- Toast ---------- */
+    .toast{
+      position:fixed;bottom:22px;left:50%;transform:translateX(-50%) translateY(20px);
+      background:var(--bar-bg);color:var(--bar-text);padding:12px 20px;border-radius:8px;font-size:13px;
+      opacity:0;pointer-events:none;transition:opacity .2s ease, transform .2s ease;z-index:100;
+      display:flex;align-items:center;gap:8px;max-width:90vw;
+    }
+    .toast.show{opacity:1;transform:translateX(-50%) translateY(0);}
+    .toast.error{background:var(--rust);}
+
+    .loading-row td{padding:40px;text-align:center;color:var(--muted);font-size:13px;}
+
+    /* ---------- Reminder Slideshow (always-on panel) ---------- */
+    .slideshow-panel{
+      background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);
+      padding:18px 22px;margin-bottom:22px;position:relative;overflow:hidden;
+    }
+    .slideshow-panel::before{content:"";position:absolute;top:0;left:0;right:0;height:4px;background:var(--rust);}
+    .slideshow-panel.tier-mid::before{background:var(--amber);}
+    .slideshow-panel.tier-low::before{background:var(--teal);}
+    .slideshow-head{display:flex;align-items:center;justify-content:space-between;margin-bottom:14px;gap:10px;flex-wrap:wrap;}
+    .slideshow-title{display:flex;align-items:center;gap:8px;color:var(--ink);font-family:'Space Grotesk',sans-serif;font-weight:600;font-size:13px;}
+    .slideshow-title svg{opacity:.7;flex-shrink:0;color:var(--rust);}
+    .slideshow-counter{color:var(--muted);font-size:11.5px;letter-spacing:.3px;}
+    .slideshow-body{display:flex;align-items:center;gap:16px;}
+    .slideshow-btn{
+      background:var(--paper);border:1px solid var(--line);color:var(--ink);
+      border-radius:50%;width:32px;height:32px;display:inline-flex;align-items:center;justify-content:center;
+      cursor:pointer;flex-shrink:0;
+    }
+    .slideshow-btn:hover{background:var(--line);}
+    .slideshow-playpause{border-radius:20px;width:auto;padding:0 14px;gap:6px;font-size:12px;font-weight:600;}
+    .slideshow-stage{flex:1;min-width:0;}
+    .slideshow-card{width:100%;}
+    .slideshow-eyebrow{font-size:10.5px;text-transform:uppercase;letter-spacing:.6px;color:var(--muted);font-weight:600;}
+    .slideshow-name{font-family:'Space Grotesk',sans-serif;font-size:18px;font-weight:700;margin:4px 0 8px;color:var(--ink);}
+    .slideshow-sub{font-size:12px;color:var(--muted);margin:-4px 0 12px;}
+    .slideshow-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;}
+    .slideshow-stat{background:var(--paper);border:1px solid var(--line);border-radius:10px;padding:9px 12px;}
+    .slideshow-stat .lbl{font-size:9.5px;text-transform:uppercase;letter-spacing:.4px;color:var(--muted);font-weight:600;}
+    .slideshow-stat .val{font-family:'IBM Plex Mono',monospace;font-size:14.5px;font-weight:600;margin-top:4px;color:var(--ink);}
+    .slideshow-stat.outstanding .val{color:var(--rust);}
+    .slideshow-age{
+      display:inline-flex;align-items:center;gap:6px;background:var(--rust-bg);color:var(--rust);
+      border-radius:20px;padding:5px 11px;font-size:11.5px;font-weight:600;margin-top:12px;
+    }
+    .slideshow-age.tier-mid{background:var(--amber-bg);color:var(--amber);}
+    .slideshow-age.tier-low{background:var(--teal-bg);color:var(--teal);}
+    .slideshow-progress{display:flex;gap:5px;flex-wrap:wrap;margin-top:12px;}
+    .slideshow-dot{width:6px;height:6px;border-radius:50%;background:var(--line);flex-shrink:0;}
+    .slideshow-dot.active{background:var(--ink);}
+    .slideshow-empty{color:var(--muted);font-size:13.5px;}
+    @media (max-width:760px){
+      .slideshow-grid{grid-template-columns:repeat(2,1fr);}
+      .slideshow-body{flex-direction:column;align-items:stretch;}
+      .slideshow-btn{align-self:center;}
+    }
+
+    @media (max-width:760px){
+      .stats{grid-template-columns:repeat(2,1fr);}
+      .wrap{padding:18px 14px 50px;}
+      .topbar{padding:14px 16px;}
+      table thead{display:none;}
+      table, tbody, tr, td{display:block;width:100%;}
+      tbody tr{border-bottom:1px solid var(--line);padding:12px 14px;}
+      tbody td{border:none;padding:4px 0;display:flex;justify-content:space-between;gap:10px;}
+      tbody td.desc-cell{max-width:none;white-space:normal;}
+      tbody td::before{content:attr(data-label);font-size:10.5px;text-transform:uppercase;color:var(--muted);font-weight:600;letter-spacing:.4px;}
+      .amt-block{align-items:flex-end;}
+      .row-actions{justify-content:flex-end;padding-top:6px;}
+    }
+  </style>
+</head>
+<body>
+
+  <div class="topbar">
+    <div class="brand">
+      <div class="brand-mark">SC</div>
+      <div class="brand-text">
+        <h1>Creditors Ledger</h1>
+        <p>SAP Computers (Pvt) Ltd &middot; Gampaha</p>
+      </div>
+    </div>
+    <div class="topbar-actions">
+      <button class="btn btn-ghost-light btn-icon-only" id="themeToggleBtn" title="Toggle dark mode">
+        <svg id="themeIcon" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path></svg>
+      </button>
+      <button class="btn btn-ghost-light btn-icon-only" id="settingsBtn" title="Web App settings">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="3"></circle><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 1 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 1 1-2.83-2.83l.06-.06a1.65 1.65 0 0 0 .33-1.82 1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 1 1 2.83-2.83l.06.06a1.65 1.65 0 0 0 1.82.33H9a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 1 1 2.83 2.83l-.06.06a1.65 1.65 0 0 0-.33 1.82V9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"></path></svg>
+      </button>
+      <button class="btn btn-ghost-light" id="refreshBtn" title="Refresh">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="23 4 23 10 17 10"></polyline><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"></path></svg>
+        Refresh
+      </button>
+    </div>
+  </div>
+
+  <div class="wrap">
+
+    <div class="config-banner" id="configBanner">
+      <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" style="flex-shrink:0;"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="8" x2="12" y2="12"></line><line x1="12" y1="16" x2="12.01" y2="16"></line></svg>
+      <div style="flex:1;">Not connected yet. Paste your deployed Apps Script Web App URL to load the ledger.</div>
+      <button class="btn btn-primary btn-sm" id="configBannerBtn">Connect</button>
+    </div>
+
+    <div class="stats-head">
+      <div class="stats-title">Dashboard</div>
+      <span class="stats-badge" id="statsScopeBadge">
+        <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><polygon points="22 3 2 3 10 12.46 10 19 14 21 14 12.46 22 3"></polygon></svg>
+        Filtered view
+      </span>
+    </div>
+    <div class="stats">
+      <div class="stub total">
+        <div class="stub-label">Total Billed</div>
+        <div class="stub-value mono" id="statTotal">Rs 0</div>
+        <div class="stub-sub" id="statTotalSub">&nbsp;</div>
+      </div>
+      <div class="stub paid">
+        <div class="stub-label">Total Paid</div>
+        <div class="stub-value mono" id="statPaid">Rs 0</div>
+        <div class="stub-sub" id="statPaidSub">&nbsp;</div>
+      </div>
+      <div class="stub outstanding">
+        <div class="stub-label">Outstanding</div>
+        <div class="stub-value mono" id="statOutstanding">Rs 0</div>
+        <div class="stub-sub" id="statOutstandingSub">&nbsp;</div>
+      </div>
+      <div class="stub count">
+        <div class="stub-label">Creditors</div>
+        <div class="stub-value mono" id="statCount">0</div>
+        <div class="stub-sub" id="statCountSub">&nbsp;</div>
+      </div>
+    </div>
+
+    <div class="slideshow-panel" id="slideshowPanel">
+      <div class="slideshow-head">
+        <div class="slideshow-title">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"></circle><polyline points="12 6 12 12 16 14"></polyline></svg>
+          Outstanding Credit Reminder
+        </div>
+        <div class="slideshow-counter" id="slideshowCounter"></div>
+      </div>
+      <div class="slideshow-body">
+        <button class="slideshow-btn" id="slidePrevBtn" title="Previous">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="15 18 9 12 15 6"></polyline></svg>
+        </button>
+        <div class="slideshow-stage" id="slideshowStageInner"></div>
+        <button class="slideshow-btn" id="slideNextBtn" title="Next">
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="9 18 15 12 9 6"></polyline></svg>
+        </button>
+        <button class="slideshow-btn slideshow-playpause" id="slidePlayBtn" title="Play / Pause">
+          <svg id="slidePlayIcon" width="13" height="13" viewBox="0 0 24 24" fill="currentColor"><rect x="6" y="4" width="4" height="16"></rect><rect x="14" y="4" width="4" height="16"></rect></svg>
+          <span id="slidePlayLabel">Pause</span>
+        </button>
+      </div>
+    </div>
+
+    <div class="toolbar">
+      <div class="search-box">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+        <input type="text" id="searchInput" placeholder="Search creditor, bill no, or description...">
+      </div>
+      <div class="chips" id="statusChips">
+        <div class="chip active" data-filter="all">All</div>
+        <div class="chip" data-filter="unpaid">Unpaid</div>
+        <div class="chip" data-filter="partial">Partial</div>
+        <div class="chip" data-filter="paid">Paid</div>
+      </div>
+      <select class="creditor-select" id="creditorFilterSelect">
+        <option value="all">All Customers</option>
+      </select>
+      <label class="toggle-inline" id="hideZeroLabel">
+        <input type="checkbox" id="hideZeroChk">
+        Hide zero-credit
+      </label>
+      <button class="btn btn-ghost btn-sm" id="clearFiltersBtn" style="display:none;" title="Clear all filters">
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+        Clear Filters
+      </button>
+      <button class="btn btn-ghost" id="printSelectedBtn" disabled>
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 6 2 18 2 18 9"></polyline><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"></path><rect x="6" y="14" width="12" height="8"></rect></svg>
+        Print Selected
+      </button>
+      <button class="btn btn-ghost" id="printAllBtn">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 6 2 18 2 18 9"></polyline><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"></path><rect x="6" y="14" width="12" height="8"></rect></svg>
+        Print Filtered
+      </button>
+      <button class="btn btn-primary" id="addBtn">
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><line x1="12" y1="5" x2="12" y2="19"></line><line x1="5" y1="12" x2="19" y2="12"></line></svg>
+        Add Entry
+      </button>
+    </div>
+
+    <div class="table-card">
+      <table>
+        <thead>
+          <tr>
+            <th style="width:34px;"><input type="checkbox" id="selectAllChk"></th>
+            <th>Creditor</th>
+            <th>Bill No</th>
+            <th>Bill Date</th>
+            <th>Description</th>
+            <th class="num">Bill Amount</th>
+            <th class="num">Paid Amount</th>
+            <th class="num">Outstanding</th>
+            <th>Status</th>
+            <th></th>
+          </tr>
+        </thead>
+        <tbody id="tableBody">
+          <tr class="loading-row"><td colspan="10">Connect your Web App URL to load the ledger.</td></tr>
+        </tbody>
+      </table>
+    </div>
+  </div>
+
+  <!-- Settings Modal -->
+  <div class="overlay" id="settingsOverlay">
+    <div class="modal modal-sm">
+      <div class="modal-head">
+        <h2>Web App Settings</h2>
+        <button class="modal-close" id="settingsClose">&times;</button>
+      </div>
+      <div class="modal-body">
+        <div class="field">
+          <label for="s_webAppUrl">Apps Script Web App URL</label>
+          <input type="text" id="s_webAppUrl" placeholder="https://script.google.com/macros/s/XXXXXXXX/exec">
+          <div class="helper">In the Apps Script editor: Deploy &rarr; Manage deployments &rarr; copy the Web App URL. It must end in <span class="mono">/exec</span>.</div>
+        </div>
+      </div>
+      <div class="modal-foot">
+        <button class="btn btn-ghost" id="settingsCancel">Cancel</button>
+        <button class="btn btn-primary" id="settingsSave">Save & Connect</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Add / Edit Modal -->
+  <div class="overlay" id="entryOverlay">
+    <div class="modal">
+      <div class="modal-head">
+        <h2 id="entryModalTitle">Add Entry</h2>
+        <button class="modal-close" id="entryClose">&times;</button>
+      </div>
+      <div class="modal-body">
+        <input type="hidden" id="f_rowIndex">
+        <div class="field">
+          <label for="f_creditorName">Creditor name</label>
+          <input type="text" id="f_creditorName" list="creditorList" placeholder="e.g. SAP CCTV Shop">
+          <datalist id="creditorList"></datalist>
+        </div>
+        <div class="field-row">
+          <div class="field">
+            <label for="f_billNo">Bill No</label>
+            <input type="text" id="f_billNo">
+          </div>
+          <div class="field">
+            <label for="f_billDate">Bill Date</label>
+            <input type="date" id="f_billDate">
+          </div>
+        </div>
+        <div class="field">
+          <label for="f_description">Description</label>
+          <input type="text" id="f_description" placeholder="e.g. Dell Wireless Mouse WM118">
+        </div>
+        <div class="field-row">
+          <div class="field">
+            <label for="f_billAmount">Bill Amount</label>
+            <input type="number" id="f_billAmount" step="0.01" min="0">
+          </div>
+          <div class="field">
+            <label for="f_creditAmount">Credit Amount</label>
+            <input type="number" id="f_creditAmount" step="0.01" min="0">
+            <div class="helper">Leave equal to Bill Amount unless it differs.</div>
+          </div>
+        </div>
+        <div class="field-row">
+          <div class="field">
+            <label for="f_paidAmount">Paid Amount</label>
+            <input type="number" id="f_paidAmount" step="0.01" min="0">
+          </div>
+          <div class="field">
+            <label for="f_paidDate">Paid Date</label>
+            <input type="date" id="f_paidDate">
+          </div>
+        </div>
+      </div>
+      <div class="modal-foot">
+        <button class="btn btn-ghost" id="entryCancel">Cancel</button>
+        <button class="btn btn-primary" id="entrySave">Save Entry</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Mark as Paid Modal -->
+  <div class="overlay" id="payOverlay">
+    <div class="modal modal-sm">
+      <div class="modal-head">
+        <h2>Record Payment</h2>
+        <button class="modal-close" id="payClose">&times;</button>
+      </div>
+      <div class="modal-body">
+        <input type="hidden" id="p_rowIndex">
+        <div class="pay-summary">
+          <div>
+            <span class="label">Creditor</span>
+            <span class="val" id="p_creditorName" style="font-size:14px;">&mdash;</span>
+          </div>
+          <div style="text-align:right;">
+            <span class="label">Outstanding</span>
+            <span class="val" id="p_outstanding">Rs 0</span>
+          </div>
+        </div>
+        <div class="field">
+          <label for="p_paidAmount">Paid Amount</label>
+          <input type="number" id="p_paidAmount" step="0.01" min="0">
+          <div class="helper"><a href="#" id="p_fullAmountLink">Fill full outstanding amount</a></div>
+        </div>
+        <div class="field">
+          <label for="p_paidDate">Paid Date</label>
+          <input type="date" id="p_paidDate">
+        </div>
+      </div>
+      <div class="modal-foot">
+        <button class="btn btn-ghost" id="payCancel">Cancel</button>
+        <button class="btn btn-primary" id="paySave">Save Payment</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="toast" id="toast"></div>
+
+  <script>
+    /* =========================================================================
+     * CONFIG
+     * Paste your deployed Apps Script Web App URL below (must end in /exec).
+     * Deploy -> Manage deployments -> copy the "Web app" URL.
+     * If left blank, the app will prompt for it and remember it in this browser.
+     * ========================================================================= */
+    var CONFIG = {
+      WEB_APP_URL: 'PASTE_YOUR_DEPLOYED_WEB_APP_URL_HERE' // e.g. https://script.google.com/macros/s/AKfycbx.../exec
+    };
+
+    var STORAGE_KEY = 'sapCreditorsWebAppUrl';
+    var THEME_STORAGE_KEY = 'sapCreditorsTheme';
+    var allEntries = [];
+    var lastFiltered = [];
+    var selectedRows = new Set();
+    var currentFilter = 'all';
+    var currentSearch = '';
+    var currentCreditorFilter = 'all';
+    var hideZeroCredit = false;
+    var expandedCustomers = new Set();
+
+    /* ---------- Slideshow state ---------- */
+    var slideEntries = [];
+    var slideIndex = 0;
+    var slideTimer = null;
+    var SLIDE_INTERVAL_MS = 5000;
+
+    /* ---------- Customer name grouping ----------
+     * Entries that share the same customer name (ignoring case, extra
+     * spaces, and leading/trailing whitespace) are treated as ONE
+     * customer everywhere in the app - filters, stats, printed reports,
+     * and the reminder slideshow all read from this single structure. */
+    function normalizeName(name) {
+      return (name || '').trim().replace(/\s+/g, ' ').toLowerCase();
+    }
+
+    /** The key used to group an entry into a customer - same rule everywhere. */
+    function customerKeyOf(e) {
+      return normalizeName(e.creditorName) || '(no name)';
+    }
+
+    /** Groups a list of entries into one record per unique customer name.
+     * Returns an array of { key, displayName, entries[] }. */
+    function buildCustomerGroups(entries) {
+      var groups = {};
+      var order = [];
+      (entries || []).forEach(function (e) {
+        var key = customerKeyOf(e);
+        if (!groups[key]) {
+          groups[key] = { key: key, displayName: (e.creditorName || '(No name)').trim(), entries: [] };
+          order.push(key);
+        }
+        groups[key].entries.push(e);
+      });
+      return order.map(function (k) { return groups[k]; });
+    }
+
+    function getWebAppUrl() {
+      var saved = localStorage.getItem(STORAGE_KEY);
+      if (saved) return saved;
+      if (CONFIG.WEB_APP_URL && CONFIG.WEB_APP_URL.indexOf('PASTE_YOUR') === -1) return CONFIG.WEB_APP_URL;
+      return '';
+    }
+
+    function setWebAppUrl(url) {
+      localStorage.setItem(STORAGE_KEY, url);
+    }
+
+    /* ---------- Theme (light / dark) ---------- */
+    var SUN_PATH = '<circle cx="12" cy="12" r="4"></circle><line x1="12" y1="1" x2="12" y2="3"></line><line x1="12" y1="21" x2="12" y2="23"></line><line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line><line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line><line x1="1" y1="12" x2="3" y2="12"></line><line x1="21" y1="12" x2="23" y2="12"></line><line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line><line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line>';
+    var MOON_PATH = '<path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path>';
+
+    function getTheme() {
+      var saved = localStorage.getItem(THEME_STORAGE_KEY);
+      if (saved === 'light' || saved === 'dark') return saved;
+      return window.matchMedia && window.matchMedia('(prefers-color-scheme: dark)').matches ? 'dark' : 'light';
+    }
+
+    function applyTheme(theme) {
+      if (theme === 'dark') {
+        document.documentElement.setAttribute('data-theme', 'dark');
+        document.getElementById('themeIcon').innerHTML = SUN_PATH;
+        document.getElementById('themeToggleBtn').title = 'Switch to light mode';
+      } else {
+        document.documentElement.removeAttribute('data-theme');
+        document.getElementById('themeIcon').innerHTML = MOON_PATH;
+        document.getElementById('themeToggleBtn').title = 'Switch to dark mode';
+      }
+    }
+
+    function toggleTheme() {
+      var next = getTheme() === 'dark' ? 'light' : 'dark';
+      localStorage.setItem(THEME_STORAGE_KEY, next);
+      applyTheme(next);
+    }
+
+    document.addEventListener('DOMContentLoaded', function () {
+      applyTheme(getTheme());
+      document.getElementById('themeToggleBtn').addEventListener('click', toggleTheme);
+
+      document.getElementById('s_webAppUrl').value = getWebAppUrl();
+      checkConnection();
+
+      document.getElementById('refreshBtn').addEventListener('click', loadData);
+      document.getElementById('addBtn').addEventListener('click', openAddModal);
+      document.getElementById('printSelectedBtn').addEventListener('click', function () {
+        var entries = allEntries.filter(function (e) { return selectedRows.has(e.rowIndex); });
+        openPrintReport(entries, 'Selected Creditors Report');
+      });
+      document.getElementById('printAllBtn').addEventListener('click', function () {
+        var title = currentCreditorFilter !== 'all' ? currentCreditorFilter + ' - Creditor Report' : 'All Creditors Report';
+        openPrintReport(lastFiltered, title);
+      });
+      document.getElementById('selectAllChk').addEventListener('change', function () {
+        var checked = document.getElementById('selectAllChk').checked;
+        lastFiltered.forEach(function (e) {
+          if (checked) selectedRows.add(e.rowIndex); else selectedRows.delete(e.rowIndex);
+        });
+        render();
+      });
+
+      document.getElementById('settingsBtn').addEventListener('click', openSettings);
+      document.getElementById('configBannerBtn').addEventListener('click', openSettings);
+      document.getElementById('settingsClose').addEventListener('click', closeSettings);
+      document.getElementById('settingsCancel').addEventListener('click', closeSettings);
+      document.getElementById('settingsSave').addEventListener('click', function () {
+        var url = document.getElementById('s_webAppUrl').value.trim();
+        setWebAppUrl(url);
+        closeSettings();
+        checkConnection();
+      });
+
+      document.getElementById('entryClose').addEventListener('click', closeEntryModal);
+      document.getElementById('entryCancel').addEventListener('click', closeEntryModal);
+      document.getElementById('entrySave').addEventListener('click', saveEntry);
+      document.getElementById('payClose').addEventListener('click', closePayModal);
+      document.getElementById('payCancel').addEventListener('click', closePayModal);
+      document.getElementById('paySave').addEventListener('click', savePayment);
+      document.getElementById('p_fullAmountLink').addEventListener('click', function (e) {
+        e.preventDefault();
+        document.getElementById('p_paidAmount').value = document.getElementById('p_paidAmount').dataset.full;
+      });
+      document.getElementById('searchInput').addEventListener('input', function (e) {
+        currentSearch = e.target.value.toLowerCase();
+        render();
+      });
+      document.querySelectorAll('#statusChips .chip').forEach(function (chip) {
+        chip.addEventListener('click', function () {
+          document.querySelectorAll('#statusChips .chip').forEach(function (c) { c.classList.remove('active'); });
+          chip.classList.add('active');
+          currentFilter = chip.dataset.filter;
+          render();
+        });
+      });
+      [document.getElementById('entryOverlay'), document.getElementById('payOverlay'), document.getElementById('settingsOverlay')].forEach(function (ov) {
+        ov.addEventListener('click', function (e) { if (e.target === ov) ov.classList.remove('show'); });
+      });
+
+      document.getElementById('creditorFilterSelect').addEventListener('change', function (e) {
+        currentCreditorFilter = e.target.value;
+        render();
+      });
+      document.getElementById('hideZeroChk').addEventListener('change', function (e) {
+        hideZeroCredit = e.target.checked;
+        document.getElementById('hideZeroLabel').classList.toggle('active', hideZeroCredit);
+        render();
+      });
+      document.getElementById('clearFiltersBtn').addEventListener('click', clearFilters);
+
+      document.getElementById('slidePrevBtn').addEventListener('click', function () { stopAutoplay(); showSlide(slideIndex - 1); });
+      document.getElementById('slideNextBtn').addEventListener('click', function () { stopAutoplay(); showSlide(slideIndex + 1); });
+      document.getElementById('slidePlayBtn').addEventListener('click', toggleAutoplay);
+
+      renderSlideStage();
+    });
+
+    function checkConnection() {
+      var url = getWebAppUrl();
+      var banner = document.getElementById('configBanner');
+      if (!url) {
+        banner.classList.add('show');
+        document.getElementById('tableBody').innerHTML = '<tr class="loading-row"><td colspan="10">Connect your Web App URL to load the ledger.</td></tr>';
+        return;
+      }
+      banner.classList.remove('show');
+      loadData();
+    }
+
+    function openSettings() {
+      document.getElementById('s_webAppUrl').value = getWebAppUrl();
+      document.getElementById('settingsOverlay').classList.add('show');
+    }
+    function closeSettings() {
+      document.getElementById('settingsOverlay').classList.remove('show');
+    }
+
+    /* ---------- API helper: calls the Apps Script Web App ---------- */
+    function apiCall(action, payload) {
+      var url = getWebAppUrl();
+      if (!url) return Promise.reject(new Error('Web App URL is not set. Click the gear icon to connect it.'));
+      // text/plain avoids a CORS preflight request, which Apps Script Web Apps don't support.
+      return fetch(url, {
+        method: 'POST',
+        headers: { 'Content-Type': 'text/plain;charset=utf-8' },
+        body: JSON.stringify({ action: action, payload: payload || {} })
+      }).then(function (res) {
+        if (!res.ok) throw new Error('Server responded with ' + res.status);
+        return res.json();
+      });
+    }
+
+    function loadData() {
+      document.getElementById('tableBody').innerHTML = '<tr class="loading-row"><td colspan="10">Loading ledger...</td></tr>';
+      apiCall('getAllCreditors').then(function (res) {
+        if (!res.success) throw new Error(res.error || 'Could not load the ledger.');
+        allEntries = res.data || [];
+        populateCreditorList();
+        render();
+      }).catch(function (err) {
+        showToast(err.message, true);
+        document.getElementById('tableBody').innerHTML = '<tr class="loading-row"><td colspan="10">Failed to load. Check your Web App URL and try Refresh.</td></tr>';
+      });
+    }
+
+    function populateCreditorList() {
+      var groups = buildCustomerGroups(allEntries)
+        .filter(function (g) { return g.key !== '(no name)'; })
+        .sort(function (a, b) { return a.displayName.localeCompare(b.displayName); });
+
+      var list = document.getElementById('creditorList');
+      list.innerHTML = groups.map(function (g) { return '<option value="' + escapeHtml(g.displayName) + '">'; }).join('');
+
+      var select = document.getElementById('creditorFilterSelect');
+      var prevValue = select.value || 'all';
+      select.innerHTML = '<option value="all">All Customers</option>' +
+        groups.map(function (g) { return '<option value="' + escapeHtml(g.displayName) + '">' + escapeHtml(g.displayName) + '</option>'; }).join('');
+
+      var prevMatch = prevValue !== 'all' ? groups.find(function (g) { return g.key === normalizeName(prevValue); }) : null;
+      select.value = prevMatch ? prevMatch.displayName : 'all';
+      currentCreditorFilter = select.value;
+    }
+
+    function statusOf(entry) {
+      if (entry.billAmount > 0 && entry.paidAmount >= entry.billAmount) return 'paid';
+      if (entry.paidAmount > 0) return 'partial';
+      return 'unpaid';
+    }
+
+    function syncSelectAllChk() {
+      var box = document.getElementById('selectAllChk');
+      if (!box) return;
+      var visibleSelected = lastFiltered.filter(function (e) { return selectedRows.has(e.rowIndex); }).length;
+      box.checked = lastFiltered.length > 0 && visibleSelected === lastFiltered.length;
+      box.indeterminate = visibleSelected > 0 && visibleSelected < lastFiltered.length;
+    }
+
+    function updatePrintButtons() {
+      var btn = document.getElementById('printSelectedBtn');
+      var n = selectedRows.size;
+      btn.textContent = '';
+      btn.innerHTML = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 6 2 18 2 18 9"></polyline><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"></path><rect x="6" y="14" width="12" height="8"></rect></svg> Print Selected' + (n ? ' (' + n + ')' : '');
+      btn.disabled = n === 0;
+    }
+
+    function isAnyFilterActive() {
+      return currentFilter !== 'all' || currentCreditorFilter !== 'all' || hideZeroCredit || !!currentSearch;
+    }
+
+    function updateClearFiltersBtn() {
+      var btn = document.getElementById('clearFiltersBtn');
+      if (btn) btn.style.display = isAnyFilterActive() ? 'inline-flex' : 'none';
+    }
+
+    function clearFilters() {
+      currentFilter = 'all';
+      currentCreditorFilter = 'all';
+      hideZeroCredit = false;
+      currentSearch = '';
+
+      document.getElementById('searchInput').value = '';
+      document.getElementById('creditorFilterSelect').value = 'all';
+      document.getElementById('hideZeroChk').checked = false;
+      document.getElementById('hideZeroLabel').classList.remove('active');
+      document.querySelectorAll('#statusChips .chip').forEach(function (c) {
+        c.classList.toggle('active', c.dataset.filter === 'all');
+      });
+
+      render();
+    }
+
+    function render() {
+      var creditorTotals = {};
+      if (hideZeroCredit) {
+        allEntries.forEach(function (e) {
+          var key = normalizeName(e.creditorName);
+          var outstanding = Math.max(e.billAmount - e.paidAmount, 0);
+          creditorTotals[key] = (creditorTotals[key] || 0) + outstanding;
+        });
+      }
+
+      var filtered = allEntries.filter(function (e) {
+        var status = statusOf(e);
+        if (currentFilter !== 'all' && status !== currentFilter) return false;
+        if (currentCreditorFilter !== 'all' && normalizeName(e.creditorName) !== normalizeName(currentCreditorFilter)) return false;
+        if (hideZeroCredit && (creditorTotals[normalizeName(e.creditorName)] || 0) <= 0) return false;
+        if (currentSearch) {
+          var hay = (e.creditorName + ' ' + e.billNo + ' ' + e.description).toLowerCase();
+          if (hay.indexOf(currentSearch) === -1) return false;
+        }
+        return true;
+      });
+
+      filtered.sort(function (a, b) { return b.rowIndex - a.rowIndex; });
+
+      lastFiltered = filtered;
+      renderStats(filtered);
+      updateClearFiltersBtn();
+      refreshSlideEntries(filtered);
+
+      var body = document.getElementById('tableBody');
+      if (filtered.length === 0) {
+        body.innerHTML = '<tr><td colspan="10"><div class="empty-state">' +
+          '<h3>No entries found</h3><p>Try a different search or filter, or add a new entry.</p></div></td></tr>';
+        updatePrintButtons();
+        return;
+      }
+
+      var groups = buildCustomerGroups(filtered);
+      groups.forEach(function (g) {
+        g.maxRowIndex = g.entries.reduce(function (m, e) { return Math.max(m, e.rowIndex); }, -Infinity);
+      });
+      groups.sort(function (a, b) { return b.maxRowIndex - a.maxRowIndex; });
+
+      body.innerHTML = groups.map(function (g) {
+        var isExpanded = expandedCustomers.has(g.key);
+        var html = customerRowHtml(g, isExpanded);
+        if (isExpanded) {
+          var sortedEntries = g.entries.slice().sort(function (a, b) { return b.rowIndex - a.rowIndex; });
+          html += sortedEntries.map(function (e) { return rowHtml(e, true); }).join('');
+        }
+        return html;
+      }).join('');
+
+      body.querySelectorAll('[data-action="toggle-customer"]').forEach(function (btn) {
+        btn.addEventListener('click', function () {
+          var key = btn.dataset.customer;
+          if (expandedCustomers.has(key)) expandedCustomers.delete(key); else expandedCustomers.add(key);
+          render();
+        });
+      });
+      body.querySelectorAll('[data-action="edit"]').forEach(function (btn) {
+        btn.addEventListener('click', function () { openEditModal(Number(btn.dataset.row)); });
+      });
+      body.querySelectorAll('[data-action="pay"]').forEach(function (btn) {
+        btn.addEventListener('click', function () { openPayModal(Number(btn.dataset.row)); });
+      });
+      body.querySelectorAll('[data-action="delete"]').forEach(function (btn) {
+        btn.addEventListener('click', function () { deleteEntry(Number(btn.dataset.row)); });
+      });
+      body.querySelectorAll('.row-check').forEach(function (chk) {
+        chk.addEventListener('change', function () {
+          var row = Number(chk.dataset.row);
+          if (chk.checked) selectedRows.add(row); else selectedRows.delete(row);
+          syncSelectAllChk();
+          updatePrintButtons();
+        });
+      });
+      body.querySelectorAll('.customer-check').forEach(function (chk) {
+        chk.indeterminate = chk.dataset.indeterminate === 'true';
+        chk.addEventListener('change', function () {
+          var key = chk.dataset.customer;
+          var groupEntries = lastFiltered.filter(function (e) { return customerKeyOf(e) === key; });
+          groupEntries.forEach(function (e) {
+            if (chk.checked) selectedRows.add(e.rowIndex); else selectedRows.delete(e.rowIndex);
+          });
+          render();
+        });
+      });
+      syncSelectAllChk();
+      updatePrintButtons();
+    }
+
+    /** Collapsed summary row for one customer, aggregating all their bills. */
+    function customerRowHtml(g, isExpanded) {
+      var entries = g.entries;
+      var totalBill = 0, totalPaid = 0;
+      entries.forEach(function (e) { totalBill += e.billAmount; totalPaid += e.paidAmount; });
+      var outstanding = Math.max(totalBill - totalPaid, 0);
+      var pct = totalBill > 0 ? Math.min((totalPaid / totalBill) * 100, 100) : 0;
+      var status = (totalBill > 0 && outstanding <= 0) ? 'paid' : (totalPaid > 0 ? 'partial' : 'unpaid');
+      var meterColor = status === 'paid' ? 'var(--teal)' : status === 'partial' ? 'var(--amber)' : 'var(--rust)';
+      var statusLabel = status === 'paid' ? 'Paid' : status === 'partial' ? 'Partial' : 'Unpaid';
+
+      var selectedCount = entries.filter(function (e) { return selectedRows.has(e.rowIndex); }).length;
+      var checked = selectedCount === entries.length ? 'checked' : '';
+      var indeterminate = selectedCount > 0 && selectedCount < entries.length;
+
+      var billNoLabel = entries.length + ' bill' + (entries.length === 1 ? '' : 's');
+      var dates = entries.map(function (e) { return e.billDate; }).filter(Boolean).sort();
+      var dateLabel = dates.length === 0 ? '\u2014' : (dates[0] === dates[dates.length - 1] ? dates[0] : dates[0] + ' \u2192 ' + dates[dates.length - 1]);
+
+      return '' +
+        '<tr class="customer-row' + (isExpanded ? ' expanded' : '') + '">' +
+          '<td data-label="Select"><input type="checkbox" class="customer-check" data-customer="' + escapeHtml(g.key) + '" data-indeterminate="' + (indeterminate ? 'true' : 'false') + '" ' + checked + '></td>' +
+          '<td class="creditor-cell" data-label="Creditor">' +
+            '<button class="expand-btn" data-action="toggle-customer" data-customer="' + escapeHtml(g.key) + '" title="' + (isExpanded ? 'Collapse transactions' : 'Expand transactions') + '">' +
+              '<svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" style="transform:rotate(' + (isExpanded ? '90deg' : '0deg') + ');transition:transform .15s ease;flex-shrink:0;"><polyline points="9 18 15 12 9 6"></polyline></svg>' +
+            '</button>' +
+            '<span>' + escapeHtml(g.displayName) + '</span>' +
+          '</td>' +
+          '<td class="mono" data-label="Bill No">' + billNoLabel + '</td>' +
+          '<td class="mono" data-label="Bill Date">' + escapeHtml(dateLabel) + '</td>' +
+          '<td class="desc-cell" data-label="Description">' + entries.length + ' transaction' + (entries.length === 1 ? '' : 's') + '</td>' +
+          '<td class="num mono" data-label="Bill Amount">' + fmt(totalBill) + '</td>' +
+          '<td class="num mono" data-label="Paid Amount">' + fmt(totalPaid) + '</td>' +
+          '<td class="num" data-label="Outstanding">' +
+            '<div class="amt-block">' +
+              '<span class="mono">' + fmt(outstanding) + '</span>' +
+              '<div class="meter"><div class="meter-fill" style="width:' + pct + '%;background:' + meterColor + ';"></div></div>' +
+            '</div>' +
+          '</td>' +
+          '<td data-label="Status"><span class="status-pill status-' + status + '"><span class="status-dot"></span>' + statusLabel + '</span></td>' +
+          '<td></td>' +
+        '</tr>';
+    }
+
+    function rowHtml(e, isDetail) {
+      var outstanding = Math.max(e.billAmount - e.paidAmount, 0);
+      var pct = e.billAmount > 0 ? Math.min((e.paidAmount / e.billAmount) * 100, 100) : 0;
+      var status = statusOf(e);
+      var meterColor = status === 'paid' ? 'var(--teal)' : status === 'partial' ? 'var(--amber)' : 'var(--rust)';
+      var statusLabel = status === 'paid' ? 'Paid' : status === 'partial' ? 'Partial' : 'Unpaid';
+      var checked = selectedRows.has(e.rowIndex) ? 'checked' : '';
+
+      return '' +
+        '<tr' + (isDetail ? ' class="detail-row"' : '') + '>' +
+          '<td data-label="Select"><input type="checkbox" class="row-check" data-row="' + e.rowIndex + '" ' + checked + '></td>' +
+          '<td class="creditor-cell" data-label="Creditor">' + (isDetail ? '<span class="connector">&#8627;</span>' : escapeHtml(e.creditorName)) + '</td>' +
+          '<td class="mono" data-label="Bill No">' + escapeHtml(e.billNo) + '</td>' +
+          '<td class="mono" data-label="Bill Date">' + escapeHtml(e.billDate) + '</td>' +
+          '<td class="desc-cell" data-label="Description" title="' + escapeHtml(e.description) + '">' + escapeHtml(e.description) + '</td>' +
+          '<td class="num mono" data-label="Bill Amount">' + fmt(e.billAmount) + '</td>' +
+          '<td class="num mono" data-label="Paid Amount">' + fmt(e.paidAmount) + '</td>' +
+          '<td class="num" data-label="Outstanding">' +
+            '<div class="amt-block">' +
+              '<span class="mono">' + fmt(outstanding) + '</span>' +
+              '<div class="meter"><div class="meter-fill" style="width:' + pct + '%;background:' + meterColor + ';"></div></div>' +
+            '</div>' +
+          '</td>' +
+          '<td data-label="Status"><span class="status-pill status-' + status + '"><span class="status-dot"></span>' + statusLabel + '</span></td>' +
+          '<td>' +
+            '<div class="row-actions">' +
+              '<button class="icon-btn pay-btn" title="Record payment" data-action="pay" data-row="' + e.rowIndex + '">' +
+                '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"></path></svg>' +
+              '</button>' +
+              '<button class="icon-btn" title="Edit" data-action="edit" data-row="' + e.rowIndex + '">' +
+                '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.12 2.12 0 0 1 3 3L12 15l-4 1 1-4Z"></path></svg>' +
+              '</button>' +
+              '<button class="icon-btn del-btn" title="Delete" data-action="delete" data-row="' + e.rowIndex + '">' +
+                '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>' +
+              '</button>' +
+            '</div>' +
+          '</td>' +
+        '</tr>';
+    }
+
+    function renderStats(entries) {
+      entries = entries || allEntries;
+      var isFiltered = entries.length !== allEntries.length;
+
+      var totalBilled = 0, totalPaid = 0;
+      var names = new Set();
+      entries.forEach(function (e) {
+        totalBilled += e.billAmount;
+        totalPaid += e.paidAmount;
+        if (e.creditorName) names.add(normalizeName(e.creditorName));
+      });
+      var outstanding = Math.max(totalBilled - totalPaid, 0);
+      var unpaidCount = entries.filter(function (e) { return statusOf(e) !== 'paid'; }).length;
+      var entriesLabel = entries.length + (isFiltered ? ' of ' + allEntries.length : '') + ' entries';
+
+      document.getElementById('statTotal').textContent = fmt(totalBilled);
+      document.getElementById('statTotalSub').textContent = entriesLabel;
+      document.getElementById('statPaid').textContent = fmt(totalPaid);
+      document.getElementById('statPaidSub').textContent = totalBilled > 0 ? Math.round((totalPaid / totalBilled) * 100) + '% settled' : '\u00A0';
+      document.getElementById('statOutstanding').textContent = fmt(outstanding);
+      document.getElementById('statOutstandingSub').textContent = unpaidCount + ' bill(s) pending';
+      document.getElementById('statCount').textContent = names.size;
+      document.getElementById('statCountSub').textContent = isFiltered ? 'in current filter' : 'active suppliers';
+
+      var badge = document.getElementById('statsScopeBadge');
+      if (badge) badge.style.display = isFiltered ? 'inline-flex' : 'none';
+    }
+
+    function fmt(n) {
+      n = Number(n) || 0;
+      return 'Rs ' + n.toLocaleString('en-LK', { minimumFractionDigits: 0, maximumFractionDigits: 2 });
+    }
+
+    function escapeHtml(str) {
+      if (str === null || str === undefined) return '';
+      return String(str).replace(/[&<>"']/g, function (m) {
+        return { '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[m];
+      });
+    }
+
+    /* ---------- Add / Edit modal ---------- */
+    function openAddModal() {
+      document.getElementById('entryModalTitle').textContent = 'Add Entry';
+      document.getElementById('f_rowIndex').value = '';
+      ['f_creditorName','f_billNo','f_description'].forEach(function (id) { document.getElementById(id).value = ''; });
+      document.getElementById('f_billDate').value = new Date().toISOString().slice(0, 10);
+      document.getElementById('f_billAmount').value = '';
+      document.getElementById('f_creditAmount').value = '';
+      document.getElementById('f_paidAmount').value = '0';
+      document.getElementById('f_paidDate').value = '';
+      document.getElementById('entryOverlay').classList.add('show');
+      document.getElementById('f_creditorName').focus();
+    }
+
+    function openEditModal(rowIndex) {
+      var e = allEntries.find(function (x) { return x.rowIndex === rowIndex; });
+      if (!e) return;
+      document.getElementById('entryModalTitle').textContent = 'Edit Entry';
+      document.getElementById('f_rowIndex').value = e.rowIndex;
+      document.getElementById('f_creditorName').value = e.creditorName;
+      document.getElementById('f_billNo').value = e.billNo;
+      document.getElementById('f_billDate').value = e.billDate;
+      document.getElementById('f_description').value = e.description;
+      document.getElementById('f_billAmount').value = e.billAmount;
+      document.getElementById('f_creditAmount').value = e.creditAmount;
+      document.getElementById('f_paidAmount').value = e.paidAmount;
+      document.getElementById('f_paidDate').value = e.paidDate;
+      document.getElementById('entryOverlay').classList.add('show');
+    }
+
+    function closeEntryModal() {
+      document.getElementById('entryOverlay').classList.remove('show');
+    }
+
+    function saveEntry() {
+      var rowIndex = document.getElementById('f_rowIndex').value;
+      var name = document.getElementById('f_creditorName').value.trim();
+      if (!name) { showToast('Creditor name is required.', true); return; }
+
+      var data = {
+        creditorName: name,
+        billNo: document.getElementById('f_billNo').value.trim(),
+        billDate: document.getElementById('f_billDate').value,
+        description: document.getElementById('f_description').value.trim(),
+        billAmount: document.getElementById('f_billAmount').value || 0,
+        creditAmount: document.getElementById('f_creditAmount').value || document.getElementById('f_billAmount').value || 0,
+        paidAmount: document.getElementById('f_paidAmount').value || 0,
+        paidDate: document.getElementById('f_paidDate').value
+      };
+
+      var saveBtn = document.getElementById('entrySave');
+      saveBtn.disabled = true;
+      saveBtn.textContent = 'Saving...';
+
+      var action = rowIndex ? 'updateCreditor' : 'addCreditor';
+      var payload = rowIndex ? { rowIndex: Number(rowIndex), data: data } : data;
+
+      apiCall(action, payload).then(function (res) {
+        saveBtn.disabled = false;
+        saveBtn.textContent = 'Save Entry';
+        if (res && res.success) {
+          closeEntryModal();
+          showToast(rowIndex ? 'Entry updated.' : 'Entry added.');
+          loadData();
+        } else {
+          showToast((res && res.error) || 'Could not save the entry.', true);
+        }
+      }).catch(function (err) {
+        saveBtn.disabled = false;
+        saveBtn.textContent = 'Save Entry';
+        showToast(err.message || 'Could not save the entry.', true);
+      });
+    }
+
+    function deleteEntry(rowIndex) {
+      var e = allEntries.find(function (x) { return x.rowIndex === rowIndex; });
+      if (!e) return;
+      var ok = confirm('Delete this entry?\n\n' + e.creditorName + ' \u2014 ' + e.description + '\n\nThis cannot be undone.');
+      if (!ok) return;
+      apiCall('deleteCreditor', { rowIndex: rowIndex }).then(function (res) {
+        if (res && res.success) {
+          showToast('Entry deleted.');
+          loadData();
+        } else {
+          showToast((res && res.error) || 'Could not delete the entry.', true);
+        }
+      }).catch(function (err) {
+        showToast(err.message || 'Could not delete the entry.', true);
+      });
+    }
+
+    /* ---------- Payment modal ---------- */
+    function openPayModal(rowIndex) {
+      var e = allEntries.find(function (x) { return x.rowIndex === rowIndex; });
+      if (!e) return;
+      var outstanding = Math.max(e.billAmount - e.paidAmount, 0);
+      document.getElementById('p_rowIndex').value = e.rowIndex;
+      document.getElementById('p_creditorName').textContent = e.creditorName + (e.billNo ? ' \u00B7 ' + e.billNo : '');
+      document.getElementById('p_outstanding').textContent = fmt(outstanding);
+      document.getElementById('p_paidAmount').value = outstanding;
+      document.getElementById('p_paidAmount').dataset.full = outstanding;
+      document.getElementById('p_paidDate').value = new Date().toISOString().slice(0, 10);
+      document.getElementById('payOverlay').classList.add('show');
+      document.getElementById('p_paidAmount').focus();
+    }
+
+    function closePayModal() {
+      document.getElementById('payOverlay').classList.remove('show');
+    }
+
+    function savePayment() {
+      var rowIndex = Number(document.getElementById('p_rowIndex').value);
+      var paidAmount = document.getElementById('p_paidAmount').value || 0;
+      var paidDate = document.getElementById('p_paidDate').value;
+
+      var saveBtn = document.getElementById('paySave');
+      saveBtn.disabled = true;
+      saveBtn.textContent = 'Saving...';
+
+      apiCall('markAsPaid', { rowIndex: rowIndex, paidAmount: paidAmount, paidDate: paidDate }).then(function (res) {
+        saveBtn.disabled = false;
+        saveBtn.textContent = 'Save Payment';
+        if (res && res.success) {
+          closePayModal();
+          showToast('Payment recorded.');
+          loadData();
+        } else {
+          showToast((res && res.error) || 'Could not record the payment.', true);
+        }
+      }).catch(function (err) {
+        saveBtn.disabled = false;
+        saveBtn.textContent = 'Save Payment';
+        showToast(err.message || 'Could not record the payment.', true);
+      });
+    }
+
+    /* ---------- Print reports ---------- */
+    function openPrintReport(entries, title) {
+      if (!entries || entries.length === 0) {
+        showToast('No entries to print.', true);
+        return;
+      }
+      var win = window.open('', '_blank');
+      if (!win) {
+        showToast('Please allow pop-ups to print a report.', true);
+        return;
+      }
+      win.document.write(buildReportHtml(entries, title));
+      win.document.close();
+    }
+
+    function buildReportHtml(entries, title) {
+      var groups = buildCustomerGroups(entries)
+        .sort(function (a, b) { return a.displayName.localeCompare(b.displayName); });
+
+      var grandBill = 0, grandPaid = 0;
+      var blocksHtml = groups.map(function (g) {
+        var name = g.displayName;
+        var rows = g.entries.slice().sort(function (a, b) { return (a.billDate || '').localeCompare(b.billDate || ''); });
+        var subBill = 0, subPaid = 0;
+        var rowsHtml = rows.map(function (e) {
+          var outstanding = Math.max(e.billAmount - e.paidAmount, 0);
+          subBill += e.billAmount;
+          subPaid += e.paidAmount;
+          var status = statusOf(e);
+          var statusLabel = status === 'paid' ? 'Paid' : status === 'partial' ? 'Partial' : 'Unpaid';
+          return '<tr>' +
+            '<td>' + escapeHtml(e.billNo) + '</td>' +
+            '<td>' + escapeHtml(e.billDate) + '</td>' +
+            '<td>' + escapeHtml(e.description) + '</td>' +
+            '<td class="num">' + fmt(e.billAmount) + '</td>' +
+            '<td class="num">' + fmt(e.paidAmount) + '</td>' +
+            '<td class="num">' + fmt(outstanding) + '</td>' +
+            '<td>' + statusLabel + '</td>' +
+          '</tr>';
+        }).join('');
+        var subOutstanding = Math.max(subBill - subPaid, 0);
+        grandBill += subBill;
+        grandPaid += subPaid;
+        return '' +
+          '<div class="creditor-block">' +
+            '<div class="creditor-head">' +
+              '<h3>' + escapeHtml(name) + '</h3>' +
+              '<span>Remaining Credit: ' + fmt(subOutstanding) + '</span>' +
+            '</div>' +
+            '<table>' +
+              '<thead><tr><th>Bill No</th><th>Bill Date</th><th>Description</th><th class="num">Bill Amount</th><th class="num">Paid Amount</th><th class="num">Outstanding</th><th>Status</th></tr></thead>' +
+              '<tbody>' + rowsHtml + '</tbody>' +
+              '<tfoot><tr><td colspan="3">Subtotal</td><td class="num">' + fmt(subBill) + '</td><td class="num">' + fmt(subPaid) + '</td><td class="num">' + fmt(subOutstanding) + '</td><td></td></tr></tfoot>' +
+            '</table>' +
+          '</div>';
+      }).join('');
+
+      var grandOutstanding = Math.max(grandBill - grandPaid, 0);
+      var generatedAt = new Date().toLocaleString('en-LK', { dateStyle: 'medium', timeStyle: 'short' });
+
+      return '' +
+        '<!DOCTYPE html><html><head><meta charset="utf-8"><title>' + escapeHtml(title) + '</title>' +
+        '<style>' +
+          '@page{margin:14mm;}' +
+          '*{box-sizing:border-box;}' +
+          'body{font-family:Arial,Helvetica,sans-serif;color:#1C2333;margin:0;padding:24px;font-size:12.5px;}' +
+          '.report-header{display:flex;justify-content:space-between;align-items:flex-start;border-bottom:2px solid #1C2333;padding-bottom:14px;margin-bottom:18px;}' +
+          '.report-brand{display:flex;gap:12px;align-items:center;}' +
+          '.report-brand .mark{width:38px;height:38px;border:2px solid #1C2333;border-radius:8px;display:flex;align-items:center;justify-content:center;font-weight:bold;font-size:14px;}' +
+          '.report-brand h1{margin:0;font-size:16px;}' +
+          '.report-brand p{margin:2px 0 0;font-size:11px;color:#555;}' +
+          '.report-meta{text-align:right;}' +
+          '.report-meta h2{margin:0;font-size:15px;}' +
+          '.report-meta p{margin:3px 0 0;font-size:10.5px;color:#666;}' +
+          '.summary-bar{display:flex;gap:0;border:1px solid #ccc;border-radius:6px;overflow:hidden;margin-bottom:22px;}' +
+          '.summary-bar div{flex:1;padding:10px 14px;border-right:1px solid #ccc;}' +
+          '.summary-bar div:last-child{border-right:none;}' +
+          '.summary-bar .lbl{font-size:9.5px;text-transform:uppercase;letter-spacing:.4px;color:#666;}' +
+          '.summary-bar .val{font-size:15px;font-weight:bold;margin-top:3px;}' +
+          '.creditor-block{margin-bottom:20px;page-break-inside:avoid;}' +
+          '.creditor-head{display:flex;justify-content:space-between;align-items:baseline;border-bottom:1.5px solid #1C2333;padding-bottom:5px;margin-bottom:6px;}' +
+          '.creditor-head h3{margin:0;font-size:13.5px;}' +
+          '.creditor-head span{font-size:11.5px;font-weight:bold;}' +
+          'table{width:100%;border-collapse:collapse;}' +
+          'th,td{text-align:left;padding:5px 7px;font-size:11px;border-bottom:1px solid #E2E2E2;}' +
+          'th{font-size:9.5px;text-transform:uppercase;letter-spacing:.3px;color:#555;border-bottom:1px solid #999;}' +
+          'td.num, th.num{text-align:right;}' +
+          'tfoot td{font-weight:bold;border-top:1.5px solid #999;border-bottom:none;}' +
+          '.grand-total{margin-top:10px;border-top:2px solid #1C2333;padding-top:10px;display:flex;justify-content:flex-end;gap:26px;}' +
+          '.grand-total div{text-align:right;}' +
+          '.grand-total .lbl{font-size:9.5px;text-transform:uppercase;color:#666;}' +
+          '.grand-total .val{font-size:14px;font-weight:bold;}' +
+          '.report-footer{margin-top:24px;padding-top:10px;border-top:1px solid #ccc;font-size:9.5px;color:#888;display:flex;justify-content:space-between;}' +
+          '.print-toolbar{margin-bottom:16px;}' +
+          '.print-toolbar button{font-family:Arial,sans-serif;font-size:12px;padding:8px 16px;border-radius:6px;border:1px solid #1C2333;background:#1C2333;color:#fff;cursor:pointer;margin-right:8px;}' +
+          '.print-toolbar button.secondary{background:#fff;color:#1C2333;}' +
+          '@media print{.print-toolbar{display:none;}}' +
+        '</style></head><body>' +
+          '<div class="print-toolbar">' +
+            '<button onclick="window.print()">Print</button>' +
+            '<button class="secondary" onclick="window.close()">Close</button>' +
+          '</div>' +
+          '<div class="report-header">' +
+            '<div class="report-brand"><div class="mark">SC</div><div><h1>SAP Computers (Pvt) Ltd</h1><p>Gampaha, Sri Lanka</p></div></div>' +
+            '<div class="report-meta"><h2>' + escapeHtml(title) + '</h2><p>Generated ' + escapeHtml(generatedAt) + '</p></div>' +
+          '</div>' +
+          '<div class="summary-bar">' +
+            '<div><div class="lbl">Creditors</div><div class="val">' + groups.length + '</div></div>' +
+            '<div><div class="lbl">Total Billed</div><div class="val">' + fmt(grandBill) + '</div></div>' +
+            '<div><div class="lbl">Total Paid</div><div class="val">' + fmt(grandPaid) + '</div></div>' +
+            '<div><div class="lbl">Remaining Credit</div><div class="val">' + fmt(grandOutstanding) + '</div></div>' +
+          '</div>' +
+          blocksHtml +
+          '<div class="grand-total">' +
+            '<div><div class="lbl">Total Billed</div><div class="val">' + fmt(grandBill) + '</div></div>' +
+            '<div><div class="lbl">Total Paid</div><div class="val">' + fmt(grandPaid) + '</div></div>' +
+            '<div><div class="lbl">Remaining Credit</div><div class="val">' + fmt(grandOutstanding) + '</div></div>' +
+          '</div>' +
+          '<div class="report-footer"><span>SAP Creditors Ledger</span><span>' + groups.length + ' creditor(s), ' + entries.length + ' bill(s)</span></div>' +
+        '</body></html>';
+    }
+
+    /* ---------- Reminder Slideshow ---------- */
+    function daysBetween(dateStr) {
+      if (!dateStr) return null;
+      var d = new Date(dateStr + 'T00:00:00');
+      if (isNaN(d.getTime())) return null;
+      var ms = new Date().setHours(0, 0, 0, 0) - d.getTime();
+      return Math.max(Math.round(ms / 86400000), 0);
+    }
+
+    function ageTier(days) {
+      if (days === null) return 'tier-low';
+      if (days >= 60) return 'tier-high';
+      if (days >= 30) return 'tier-mid';
+      return 'tier-low';
+    }
+
+    /** Rebuilds the slide list from the currently FILTERED table data (search,
+     * status chip, customer filter, hide-zero-credit all apply here too),
+     * one slide per unique customer, merging all of that customer's visible
+     * bills. Only customers whose overall balance in the current view is
+     * non-zero are shown. Oldest bill first so the most overdue customer
+     * shows first. Call after every render/filter change. */
+    function refreshSlideEntries(sourceEntries) {
+      var entries = sourceEntries || lastFiltered || allEntries;
+
+      slideEntries = buildCustomerGroups(entries).map(function (g) {
+        var billAmount = 0, paidAmount = 0, oldestDate = null, billCount = 0;
+        g.entries.forEach(function (e) {
+          billAmount += e.billAmount;
+          paidAmount += e.paidAmount;
+          billCount++;
+          if (e.billDate && (!oldestDate || e.billDate < oldestDate)) oldestDate = e.billDate;
+        });
+        var outstanding = billAmount - paidAmount;
+        if (outstanding <= 0) return null; // skip customers whose overall balance is zero
+
+        return {
+          creditorName: g.displayName,
+          billCount: billCount,
+          billAmount: billAmount,
+          paidAmount: paidAmount,
+          billDate: oldestDate,
+          description: billCount + ' bill' + (billCount === 1 ? '' : 's') + ' in current view'
+        };
+      }).filter(Boolean).sort(function (a, b) { return (a.billDate || '').localeCompare(b.billDate || ''); });
+
+      if (slideIndex >= slideEntries.length) slideIndex = 0;
+      renderSlideStage();
+
+      if (slideEntries.length > 1 && !slideTimer) startAutoplay();
+      if (slideEntries.length <= 1) stopAutoplay();
+    }
+
+    function showSlide(index) {
+      if (slideEntries.length === 0) return;
+      slideIndex = ((index % slideEntries.length) + slideEntries.length) % slideEntries.length;
+      renderSlideStage();
+    }
+
+    function renderSlideStage() {
+      var panel = document.getElementById('slideshowPanel');
+      var stage = document.getElementById('slideshowStageInner');
+      var counter = document.getElementById('slideshowCounter');
+
+      if (slideEntries.length === 0) {
+        panel.className = 'slideshow-panel';
+        var emptyMsg = isAnyFilterActive()
+          ? '\u2728 No outstanding credit for the current filter/search.'
+          : '\u2728 No outstanding credit right now &mdash; every creditor is settled.';
+        stage.innerHTML = '<div class="slideshow-card"><div class="slideshow-empty">' + emptyMsg + '</div></div>';
+        counter.textContent = '';
+        return;
+      }
+
+      var e = slideEntries[slideIndex];
+      var outstanding = Math.max(e.billAmount - e.paidAmount, 0);
+      var days = daysBetween(e.billDate);
+      var tier = ageTier(days);
+      var ageLabel = days === null ? 'Date unknown' : (days === 0 ? 'Billed today' : days + ' day' + (days === 1 ? '' : 's') + ' outstanding');
+
+      panel.className = 'slideshow-panel ' + tier;
+
+      stage.innerHTML = '' +
+        '<div class="slideshow-card">' +
+          '<div class="slideshow-eyebrow">Outstanding Credit &middot; ' + e.billCount + ' bill' + (e.billCount === 1 ? '' : 's') + '</div>' +
+          '<div class="slideshow-name">' + escapeHtml(e.creditorName || '(No name)') + '</div>' +
+          '<div class="slideshow-sub">' + escapeHtml(e.description || 'No description') + '</div>' +
+          '<div class="slideshow-grid">' +
+            '<div class="slideshow-stat"><div class="lbl">Bill Amount</div><div class="val">' + fmt(e.billAmount) + '</div></div>' +
+            '<div class="slideshow-stat"><div class="lbl">Paid Amount</div><div class="val">' + fmt(e.paidAmount) + '</div></div>' +
+            '<div class="slideshow-stat outstanding"><div class="lbl">Outstanding</div><div class="val">' + fmt(outstanding) + '</div></div>' +
+            '<div class="slideshow-stat"><div class="lbl">Oldest Bill</div><div class="val" style="font-size:14px;">' + escapeHtml(e.billDate || '\u2014') + '</div></div>' +
+          '</div>' +
+          '<span class="slideshow-age ' + tier + '">' + ageLabel + '</span>' +
+          '<div class="slideshow-progress">' + slideEntries.map(function (_, i) {
+            return '<span class="slideshow-dot' + (i === slideIndex ? ' active' : '') + '"></span>';
+          }).join('') + '</div>' +
+        '</div>';
+
+      counter.textContent = (slideIndex + 1) + ' / ' + slideEntries.length + ' customers \u2014 oldest bill first';
+    }
+
+    function startAutoplay() {
+      stopAutoplay();
+      slideTimer = setInterval(function () { showSlide(slideIndex + 1); }, SLIDE_INTERVAL_MS);
+      document.getElementById('slidePlayLabel').textContent = 'Pause';
+      document.getElementById('slidePlayIcon').innerHTML = '<rect x="6" y="4" width="4" height="16"></rect><rect x="14" y="4" width="4" height="16"></rect>';
+    }
+
+    function stopAutoplay() {
+      if (slideTimer) { clearInterval(slideTimer); slideTimer = null; }
+      var label = document.getElementById('slidePlayLabel');
+      var icon = document.getElementById('slidePlayIcon');
+      if (label) label.textContent = 'Play';
+      if (icon) icon.innerHTML = '<polygon points="5 3 19 12 5 21 5 3"></polygon>';
+    }
+
+    function toggleAutoplay() {
+      if (slideTimer) stopAutoplay(); else if (slideEntries.length > 1) startAutoplay();
+    }
+
+    /* ---------- Toast ---------- */
+    var toastTimer;
+    function showToast(msg, isError) {
+      var t = document.getElementById('toast');
+      t.textContent = msg;
+      t.className = 'toast show' + (isError ? ' error' : '');
+      clearTimeout(toastTimer);
+      toastTimer = setTimeout(function () { t.classList.remove('show'); }, 3200);
+    }
+  </script>
+</body>
+</html>
