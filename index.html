@@ -162,6 +162,34 @@
     .toggle-inline input{width:15px;height:15px;accent-color:var(--navy);cursor:pointer;}
     .toggle-inline.active{color:var(--ink);}
 
+    /* ---------- Payment method segmented control ---------- */
+    .method-toggle{display:flex;gap:8px;}
+    .method-btn{
+      flex:1;border:1px solid var(--line);background:var(--surface);border-radius:8px;
+      padding:9px 12px;font-size:13px;font-weight:600;color:var(--muted);cursor:pointer;
+      font-family:'Inter',sans-serif;display:flex;align-items:center;justify-content:center;gap:6px;
+      transition:background .12s ease,border-color .12s ease,color .12s ease;
+    }
+    .method-btn.active{background:var(--navy);color:#fff;border-color:var(--navy);}
+    .cheque-fields{
+      margin-top:2px;padding:12px;background:var(--paper);border:1px solid var(--line);
+      border-radius:8px;display:none;flex-direction:column;gap:12px;
+    }
+    .cheque-fields.show{display:flex;}
+    .cheque-badge{
+      display:inline-flex;align-items:center;gap:4px;margin-left:6px;
+      border:1px solid var(--navy);background:transparent;color:var(--navy);
+      border-radius:20px;padding:3px 9px 3px 7px;font-size:10.5px;font-weight:700;
+      cursor:pointer;font-family:'Inter',sans-serif;letter-spacing:.2px;vertical-align:middle;
+    }
+    [data-theme="dark"] .cheque-badge{color:var(--navy);border-color:var(--navy);}
+    .cheque-badge:hover{background:var(--navy);color:#fff;}
+    .cheque-view-grid{display:flex;flex-direction:column;gap:14px;}
+    .cheque-view-row{display:flex;justify-content:space-between;align-items:baseline;gap:12px;padding:2px 0;border-bottom:1px dashed var(--line);padding-bottom:10px;}
+    .cheque-view-row:last-child{border-bottom:none;}
+    .cheque-view-row .label{font-size:11.5px;color:var(--muted);font-weight:600;text-transform:uppercase;letter-spacing:.4px;}
+    .cheque-view-row .val{font-size:14px;font-weight:600;color:var(--ink);text-align:right;}
+
     /* ---------- Table ---------- */
     .table-card{background:var(--surface);border:1px solid var(--line);border-radius:var(--radius);overflow:hidden;}
     table{width:100%;border-collapse:collapse;}
@@ -577,10 +605,74 @@
           <label for="p_paidDate">Paid Date</label>
           <input type="date" id="p_paidDate">
         </div>
+        <div class="field">
+          <label>Settlement Method</label>
+          <div class="method-toggle">
+            <button type="button" class="method-btn active" id="p_methodCash" data-method="Cash">Cash</button>
+            <button type="button" class="method-btn" id="p_methodCheque" data-method="Cheque">Cheque</button>
+          </div>
+        </div>
+        <div class="cheque-fields" id="chequeFields">
+          <div class="field">
+            <label for="p_chequeNo">Cheque Number</label>
+            <input type="text" id="p_chequeNo" placeholder="e.g. 004521">
+          </div>
+          <div class="field-row">
+            <div class="field">
+              <label for="p_chequeDueDate">Cheque Due Date</label>
+              <input type="date" id="p_chequeDueDate">
+            </div>
+            <div class="field">
+              <label for="p_bankName">Bank Name</label>
+              <input type="text" id="p_bankName" placeholder="e.g. Commercial Bank">
+            </div>
+          </div>
+        </div>
       </div>
       <div class="modal-foot">
         <button class="btn btn-ghost" id="payCancel">Cancel</button>
         <button class="btn btn-primary" id="paySave">Save Payment</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- View Cheque Details Modal -->
+  <div class="overlay" id="chequeViewOverlay">
+    <div class="modal modal-sm">
+      <div class="modal-head">
+        <h2>Cheque Details</h2>
+        <button class="modal-close" id="chequeViewClose">&times;</button>
+      </div>
+      <div class="modal-body">
+        <div class="cheque-view-grid">
+          <div class="cheque-view-row">
+            <span class="label">Creditor</span>
+            <span class="val" id="cv_creditorName">&mdash;</span>
+          </div>
+          <div class="cheque-view-row">
+            <span class="label">Cheque Number</span>
+            <span class="val mono" id="cv_chequeNo">&mdash;</span>
+          </div>
+          <div class="cheque-view-row">
+            <span class="label">Bank</span>
+            <span class="val" id="cv_bankName">&mdash;</span>
+          </div>
+          <div class="cheque-view-row">
+            <span class="label">Cheque Due Date</span>
+            <span class="val" id="cv_chequeDueDate">&mdash;</span>
+          </div>
+          <div class="cheque-view-row">
+            <span class="label">Amount Paid</span>
+            <span class="val mono" id="cv_paidAmount">&mdash;</span>
+          </div>
+          <div class="cheque-view-row">
+            <span class="label">Recorded On</span>
+            <span class="val" id="cv_paidDate">&mdash;</span>
+          </div>
+        </div>
+      </div>
+      <div class="modal-foot">
+        <button class="btn btn-ghost" id="chequeViewCloseBtn">Close</button>
       </div>
     </div>
   </div>
@@ -595,7 +687,7 @@
      * If left blank, the app will prompt for it and remember it in this browser.
      * ========================================================================= */
     var CONFIG = {
-      WEB_APP_URL: 'https://script.google.com/macros/s/AKfycbwKPI49AwDn6sfbPCTqRnWS7PruIlTCX8hCMQKVaFMlXm_5DSX9TQcp4xKcV0OY5eMb/exec' // e.g. https://script.google.com/macros/s/AKfycbx.../exec
+      WEB_APP_URL: 'PASTE_YOUR_DEPLOYED_WEB_APP_URL_HERE' // e.g. https://script.google.com/macros/s/AKfycbx.../exec
     };
 
     var STORAGE_KEY = 'sapCreditorsWebAppUrl';
@@ -730,6 +822,10 @@
         e.preventDefault();
         document.getElementById('p_paidAmount').value = document.getElementById('p_paidAmount').dataset.full;
       });
+      document.getElementById('p_methodCash').addEventListener('click', function () { setPayMethod('Cash'); });
+      document.getElementById('p_methodCheque').addEventListener('click', function () { setPayMethod('Cheque'); });
+      document.getElementById('chequeViewClose').addEventListener('click', closeChequeView);
+      document.getElementById('chequeViewCloseBtn').addEventListener('click', closeChequeView);
       document.getElementById('searchInput').addEventListener('input', function (e) {
         currentSearch = e.target.value.toLowerCase();
         render();
@@ -742,7 +838,7 @@
           render();
         });
       });
-      [document.getElementById('entryOverlay'), document.getElementById('payOverlay'), document.getElementById('settingsOverlay')].forEach(function (ov) {
+      [document.getElementById('entryOverlay'), document.getElementById('payOverlay'), document.getElementById('settingsOverlay'), document.getElementById('chequeViewOverlay')].forEach(function (ov) {
         ov.addEventListener('click', function (e) { if (e.target === ov) ov.classList.remove('show'); });
       });
 
@@ -947,6 +1043,9 @@
       body.querySelectorAll('[data-action="delete"]').forEach(function (btn) {
         btn.addEventListener('click', function () { deleteEntry(Number(btn.dataset.row)); });
       });
+      body.querySelectorAll('[data-action="view-cheque"]').forEach(function (btn) {
+        btn.addEventListener('click', function (evt) { evt.stopPropagation(); openChequeView(Number(btn.dataset.row)); });
+      });
       body.querySelectorAll('.row-check').forEach(function (chk) {
         chk.addEventListener('change', function () {
           var row = Number(chk.dataset.row);
@@ -1037,7 +1136,10 @@
               '<div class="meter"><div class="meter-fill" style="width:' + pct + '%;background:' + meterColor + ';"></div></div>' +
             '</div>' +
           '</td>' +
-          '<td data-label="Status"><span class="status-pill status-' + status + '"><span class="status-dot"></span>' + statusLabel + '</span></td>' +
+          '<td data-label="Status"><span class="status-pill status-' + status + '"><span class="status-dot"></span>' + statusLabel + '</span>' +
+            (e.paymentMethod === 'Cheque' ? '<button type="button" class="cheque-badge" title="View cheque details" data-action="view-cheque" data-row="' + e.rowIndex + '">' +
+              '<svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><rect x="2" y="5" width="20" height="14" rx="2"></rect><path d="M2 10h20"></path></svg>Cheque</button>' : '') +
+          '</td>' +
           '<td>' +
             '<div class="row-actions">' +
               '<button class="icon-btn pay-btn" title="Record payment" data-action="pay" data-row="' + e.rowIndex + '">' +
@@ -1196,6 +1298,10 @@
       document.getElementById('p_paidAmount').value = outstanding;
       document.getElementById('p_paidAmount').dataset.full = outstanding;
       document.getElementById('p_paidDate').value = new Date().toISOString().slice(0, 10);
+      document.getElementById('p_chequeNo').value = '';
+      document.getElementById('p_chequeDueDate').value = '';
+      document.getElementById('p_bankName').value = '';
+      setPayMethod('Cash');
       document.getElementById('payOverlay').classList.add('show');
       document.getElementById('p_paidAmount').focus();
     }
@@ -1204,16 +1310,59 @@
       document.getElementById('payOverlay').classList.remove('show');
     }
 
+    /** Read-only lookup of the cheque details recorded for a settled entry */
+    function openChequeView(rowIndex) {
+      var e = allEntries.find(function (x) { return x.rowIndex === rowIndex; });
+      if (!e) return;
+      document.getElementById('cv_creditorName').textContent = e.creditorName + (e.billNo ? ' \u00B7 ' + e.billNo : '');
+      document.getElementById('cv_chequeNo').textContent = e.chequeNo || '\u2014';
+      document.getElementById('cv_bankName').textContent = e.bankName || '\u2014';
+      document.getElementById('cv_chequeDueDate').textContent = e.chequeDueDate || '\u2014';
+      document.getElementById('cv_paidAmount').textContent = fmt(e.paidAmount);
+      document.getElementById('cv_paidDate').textContent = e.paidDate || '\u2014';
+      document.getElementById('chequeViewOverlay').classList.add('show');
+    }
+
+    function closeChequeView() {
+      document.getElementById('chequeViewOverlay').classList.remove('show');
+    }
+
+    /** Switches the Record Payment modal between Cash and Cheque, toggling the extra fields */
+    function setPayMethod(method) {
+      document.getElementById('payOverlay').dataset.method = method;
+      document.getElementById('p_methodCash').classList.toggle('active', method === 'Cash');
+      document.getElementById('p_methodCheque').classList.toggle('active', method === 'Cheque');
+      document.getElementById('chequeFields').classList.toggle('show', method === 'Cheque');
+    }
+
     function savePayment() {
       var rowIndex = Number(document.getElementById('p_rowIndex').value);
       var paidAmount = document.getElementById('p_paidAmount').value || 0;
       var paidDate = document.getElementById('p_paidDate').value;
+      var paymentMethod = document.getElementById('payOverlay').dataset.method || 'Cash';
+      var chequeNo = document.getElementById('p_chequeNo').value.trim();
+      var chequeDueDate = document.getElementById('p_chequeDueDate').value;
+      var bankName = document.getElementById('p_bankName').value.trim();
+
+      if (paymentMethod === 'Cheque' && !chequeNo) {
+        showToast('Please enter the cheque number.', true);
+        document.getElementById('p_chequeNo').focus();
+        return;
+      }
 
       var saveBtn = document.getElementById('paySave');
       saveBtn.disabled = true;
       saveBtn.textContent = 'Saving...';
 
-      apiCall('markAsPaid', { rowIndex: rowIndex, paidAmount: paidAmount, paidDate: paidDate }).then(function (res) {
+      apiCall('markAsPaid', {
+        rowIndex: rowIndex,
+        paidAmount: paidAmount,
+        paidDate: paidDate,
+        paymentMethod: paymentMethod,
+        chequeNo: paymentMethod === 'Cheque' ? chequeNo : '',
+        chequeDueDate: paymentMethod === 'Cheque' ? chequeDueDate : '',
+        bankName: paymentMethod === 'Cheque' ? bankName : ''
+      }).then(function (res) {
         saveBtn.disabled = false;
         saveBtn.textContent = 'Save Payment';
         if (res && res.success) {
