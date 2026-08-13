@@ -260,6 +260,7 @@
       max-height:90vh;overflow-y:auto;box-shadow:0 20px 60px var(--shadow-color);
     }
     .modal-sm{max-width:400px;}
+    .modal-lg{max-width:640px;}
     .modal-head{display:flex;align-items:center;justify-content:space-between;padding:20px 22px 14px;border-bottom:1px solid var(--line);}
     .modal-head h2{margin:0;font-family:'Space Grotesk',sans-serif;font-size:17px;font-weight:600;}
     .modal-close{background:none;border:none;font-size:20px;cursor:pointer;color:var(--muted);line-height:1;}
@@ -281,6 +282,36 @@
     .pay-summary div span{display:block;}
     .pay-summary .label{font-size:11px;color:var(--muted);text-transform:uppercase;letter-spacing:.4px;}
     .pay-summary .val{font-family:'IBM Plex Mono',monospace;font-size:16px;font-weight:600;margin-top:3px;}
+
+    /* ---------- Bulk settlement modal ---------- */
+    .bulk-intro{font-size:12.5px;color:var(--muted);margin:-4px 0 14px;line-height:1.5;}
+    .bulk-list{display:flex;flex-direction:column;gap:8px;margin-bottom:16px;max-height:260px;overflow-y:auto;padding-right:2px;}
+    .bulk-item{
+      display:flex;align-items:center;gap:10px;background:var(--paper);border:1px solid var(--line);
+      border-radius:8px;padding:10px 12px;
+    }
+    .bulk-item-info{flex:1;min-width:0;}
+    .bulk-item-name{font-size:13px;font-weight:600;color:var(--ink);white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+    .bulk-item-meta{font-size:11px;color:var(--muted);margin-top:2px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;}
+    .bulk-item-amt{width:130px;flex-shrink:0;}
+    .bulk-item-amt input{
+      width:100%;border:1px solid var(--line);border-radius:6px;padding:7px 9px;font-size:13px;
+      font-family:'IBM Plex Mono',monospace;color:var(--ink);outline:none;background:var(--surface);text-align:right;
+    }
+    .bulk-item-amt input:focus{border-color:var(--navy);}
+    .bulk-item-out{font-size:10px;color:var(--muted);margin-top:3px;text-align:right;}
+    .bulk-total-bar{
+      display:flex;justify-content:space-between;align-items:center;background:var(--teal-bg);
+      border-radius:8px;padding:12px 14px;margin-bottom:16px;
+    }
+    .bulk-total-bar .lbl{font-size:11px;text-transform:uppercase;letter-spacing:.4px;color:var(--teal);font-weight:600;}
+    .bulk-total-bar .val{font-family:'IBM Plex Mono',monospace;font-size:17px;font-weight:700;color:var(--teal);}
+    .linked-tx-block{margin-top:6px;border-top:1px solid var(--line);padding-top:14px;}
+    .linked-tx-title{font-size:11px;text-transform:uppercase;letter-spacing:.4px;color:var(--muted);font-weight:600;margin-bottom:8px;}
+    .linked-tx-item{display:flex;justify-content:space-between;gap:10px;font-size:12.5px;padding:6px 0;border-bottom:1px dashed var(--line);}
+    .linked-tx-item:last-child{border-bottom:none;}
+    .linked-tx-item .nm{color:var(--ink);font-weight:600;}
+    .linked-tx-item .amt{font-family:'IBM Plex Mono',monospace;color:var(--muted);}
 
     /* ---------- Toast ---------- */
     .toast{
@@ -352,6 +383,8 @@
       tbody td::before{content:attr(data-label);font-size:10.5px;text-transform:uppercase;color:var(--muted);font-weight:600;letter-spacing:.4px;}
       .amt-block{align-items:flex-end;}
       .row-actions{justify-content:flex-end;padding-top:6px;}
+      .bulk-item{flex-wrap:wrap;}
+      .bulk-item-amt{width:100%;}
     }
   </style>
 </head>
@@ -461,6 +494,10 @@
       <button class="btn btn-ghost btn-sm" id="clearFiltersBtn" style="display:none;" title="Clear all filters">
         <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
         Clear Filters
+      </button>
+      <button class="btn btn-ghost" id="settleSelectedBtn" disabled>
+        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"></path></svg>
+        Settle Selected
       </button>
       <button class="btn btn-ghost" id="printSelectedBtn" disabled>
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 6 2 18 2 18 9"></polyline><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"></path><rect x="6" y="14" width="12" height="8"></rect></svg>
@@ -627,11 +664,62 @@
               <input type="text" id="p_bankName" placeholder="e.g. Commercial Bank">
             </div>
           </div>
+          <div class="helper" id="p_multiHint" style="display:none;">Paying off several bills for this creditor with one cheque? Select those rows in the table and use <strong>Settle Selected</strong> instead &mdash; it lets you apply one cheque across multiple transactions at once.</div>
         </div>
       </div>
       <div class="modal-foot">
         <button class="btn btn-ghost" id="payCancel">Cancel</button>
         <button class="btn btn-primary" id="paySave">Save Payment</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Bulk Settlement Modal (one cheque/payment across multiple transactions) -->
+  <div class="overlay" id="bulkPayOverlay">
+    <div class="modal modal-lg">
+      <div class="modal-head">
+        <h2>Settle Multiple Transactions</h2>
+        <button class="modal-close" id="bulkPayClose">&times;</button>
+      </div>
+      <div class="modal-body">
+        <div class="bulk-intro">Recording one payment (e.g. a single cheque) that covers several bills. Adjust the amount applied to each transaction below &mdash; they default to fully settling each bill.</div>
+        <div class="bulk-list" id="bulkPayList"></div>
+        <div class="bulk-total-bar">
+          <span class="lbl">Total Applied</span>
+          <span class="val mono" id="bulkPayTotal">Rs 0</span>
+        </div>
+        <div class="field">
+          <label for="bp_paidDate">Paid Date</label>
+          <input type="date" id="bp_paidDate">
+        </div>
+        <div class="field">
+          <label>Settlement Method</label>
+          <div class="method-toggle">
+            <button type="button" class="method-btn active" id="bp_methodCash" data-method="Cash">Cash</button>
+            <button type="button" class="method-btn" id="bp_methodCheque" data-method="Cheque">Cheque</button>
+          </div>
+        </div>
+        <div class="cheque-fields" id="bulkChequeFields">
+          <div class="field">
+            <label for="bp_chequeNo">Cheque Number</label>
+            <input type="text" id="bp_chequeNo" placeholder="e.g. 004521">
+          </div>
+          <div class="field-row">
+            <div class="field">
+              <label for="bp_chequeDueDate">Cheque Due Date</label>
+              <input type="date" id="bp_chequeDueDate">
+            </div>
+            <div class="field">
+              <label for="bp_bankName">Bank Name</label>
+              <input type="text" id="bp_bankName" placeholder="e.g. Commercial Bank">
+            </div>
+          </div>
+          <div class="helper">This single cheque number will be linked to every transaction listed above, so you can look up all bills it settled later from the cheque badge.</div>
+        </div>
+      </div>
+      <div class="modal-foot">
+        <button class="btn btn-ghost" id="bulkPayCancel">Cancel</button>
+        <button class="btn btn-primary" id="bulkPaySave">Save Payment</button>
       </div>
     </div>
   </div>
@@ -669,6 +757,10 @@
             <span class="label">Recorded On</span>
             <span class="val" id="cv_paidDate">&mdash;</span>
           </div>
+        </div>
+        <div class="linked-tx-block" id="cv_linkedBlock" style="display:none;">
+          <div class="linked-tx-title" id="cv_linkedTitle">Other bills settled with this cheque</div>
+          <div id="cv_linkedList"></div>
         </div>
       </div>
       <div class="modal-foot">
@@ -793,6 +885,7 @@
         var title = currentCreditorFilter !== 'all' ? currentCreditorFilter + ' - Creditor Report' : 'All Creditors Report';
         openPrintReport(lastFiltered, title);
       });
+      document.getElementById('settleSelectedBtn').addEventListener('click', openBulkPayModal);
       document.getElementById('selectAllChk').addEventListener('change', function () {
         var checked = document.getElementById('selectAllChk').checked;
         lastFiltered.forEach(function (e) {
@@ -824,6 +917,13 @@
       });
       document.getElementById('p_methodCash').addEventListener('click', function () { setPayMethod('Cash'); });
       document.getElementById('p_methodCheque').addEventListener('click', function () { setPayMethod('Cheque'); });
+
+      document.getElementById('bulkPayClose').addEventListener('click', closeBulkPayModal);
+      document.getElementById('bulkPayCancel').addEventListener('click', closeBulkPayModal);
+      document.getElementById('bulkPaySave').addEventListener('click', saveBulkPayment);
+      document.getElementById('bp_methodCash').addEventListener('click', function () { setBulkPayMethod('Cash'); });
+      document.getElementById('bp_methodCheque').addEventListener('click', function () { setBulkPayMethod('Cheque'); });
+
       document.getElementById('chequeViewClose').addEventListener('click', closeChequeView);
       document.getElementById('chequeViewCloseBtn').addEventListener('click', closeChequeView);
       document.getElementById('searchInput').addEventListener('input', function (e) {
@@ -838,7 +938,7 @@
           render();
         });
       });
-      [document.getElementById('entryOverlay'), document.getElementById('payOverlay'), document.getElementById('settingsOverlay'), document.getElementById('chequeViewOverlay')].forEach(function (ov) {
+      [document.getElementById('entryOverlay'), document.getElementById('payOverlay'), document.getElementById('settingsOverlay'), document.getElementById('chequeViewOverlay'), document.getElementById('bulkPayOverlay')].forEach(function (ov) {
         ov.addEventListener('click', function (e) { if (e.target === ov) ov.classList.remove('show'); });
       });
 
@@ -946,6 +1046,10 @@
       btn.textContent = '';
       btn.innerHTML = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="6 9 6 2 18 2 18 9"></polyline><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"></path><rect x="6" y="14" width="12" height="8"></rect></svg> Print Selected' + (n ? ' (' + n + ')' : '');
       btn.disabled = n === 0;
+
+      var settleBtn = document.getElementById('settleSelectedBtn');
+      settleBtn.innerHTML = '<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"></path></svg> Settle Selected' + (n ? ' (' + n + ')' : '');
+      settleBtn.disabled = n === 0;
     }
 
     function isAnyFilterActive() {
@@ -1287,7 +1391,7 @@
       });
     }
 
-    /* ---------- Payment modal ---------- */
+    /* ---------- Payment modal (single transaction) ---------- */
     function openPayModal(rowIndex) {
       var e = allEntries.find(function (x) { return x.rowIndex === rowIndex; });
       if (!e) return;
@@ -1301,6 +1405,14 @@
       document.getElementById('p_chequeNo').value = '';
       document.getElementById('p_chequeDueDate').value = '';
       document.getElementById('p_bankName').value = '';
+
+      // If this creditor has other outstanding bills, hint that a bulk/multi-bill
+      // cheque settlement is available instead of repeating this per bill.
+      var siblingCount = allEntries.filter(function (x) {
+        return customerKeyOf(x) === customerKeyOf(e) && Math.max(x.billAmount - x.paidAmount, 0) > 0;
+      }).length;
+      document.getElementById('p_multiHint').style.display = siblingCount > 1 ? 'block' : 'none';
+
       setPayMethod('Cash');
       document.getElementById('payOverlay').classList.add('show');
       document.getElementById('p_paidAmount').focus();
@@ -1310,7 +1422,8 @@
       document.getElementById('payOverlay').classList.remove('show');
     }
 
-    /** Read-only lookup of the cheque details recorded for a settled entry */
+    /** Read-only lookup of the cheque details recorded for a settled entry,
+     * plus any other transactions that were settled with the same cheque. */
     function openChequeView(rowIndex) {
       var e = allEntries.find(function (x) { return x.rowIndex === rowIndex; });
       if (!e) return;
@@ -1320,6 +1433,27 @@
       document.getElementById('cv_chequeDueDate').textContent = e.chequeDueDate || '\u2014';
       document.getElementById('cv_paidAmount').textContent = fmt(e.paidAmount);
       document.getElementById('cv_paidDate').textContent = e.paidDate || '\u2014';
+
+      var linkedBlock = document.getElementById('cv_linkedBlock');
+      var linkedList = document.getElementById('cv_linkedList');
+      var linked = [];
+      if (e.chequeNo) {
+        linked = allEntries.filter(function (x) {
+          return x.rowIndex !== e.rowIndex && x.paymentMethod === 'Cheque' && (x.chequeNo || '').trim() !== '' &&
+            (x.chequeNo || '').trim().toLowerCase() === (e.chequeNo || '').trim().toLowerCase();
+        });
+      }
+      if (linked.length > 0) {
+        var linkedTotal = linked.reduce(function (s, x) { return s + x.paidAmount; }, 0) + e.paidAmount;
+        document.getElementById('cv_linkedTitle').textContent = 'Other bills settled with this cheque (total ' + fmt(linkedTotal) + ')';
+        linkedList.innerHTML = linked.map(function (x) {
+          return '<div class="linked-tx-item"><span class="nm">' + escapeHtml(x.creditorName) + (x.billNo ? ' \u00B7 ' + escapeHtml(x.billNo) : '') + '</span><span class="amt mono">' + fmt(x.paidAmount) + '</span></div>';
+        }).join('');
+        linkedBlock.style.display = 'block';
+      } else {
+        linkedBlock.style.display = 'none';
+      }
+
       document.getElementById('chequeViewOverlay').classList.add('show');
     }
 
@@ -1371,6 +1505,135 @@
           loadData();
         } else {
           showToast((res && res.error) || 'Could not record the payment.', true);
+        }
+      }).catch(function (err) {
+        saveBtn.disabled = false;
+        saveBtn.textContent = 'Save Payment';
+        showToast(err.message || 'Could not record the payment.', true);
+      });
+    }
+
+    /* ---------- Bulk settlement modal (one cheque/payment across several transactions) ---------- */
+    function openBulkPayModal() {
+      var entries = allEntries.filter(function (e) { return selectedRows.has(e.rowIndex); })
+        .sort(function (a, b) { return b.rowIndex - a.rowIndex; });
+      if (entries.length === 0) {
+        showToast('Select at least one row first.', true);
+        return;
+      }
+
+      var list = document.getElementById('bulkPayList');
+      list.innerHTML = entries.map(function (e) {
+        var outstanding = Math.max(e.billAmount - e.paidAmount, 0);
+        return '' +
+          '<div class="bulk-item" data-row="' + e.rowIndex + '">' +
+            '<div class="bulk-item-info">' +
+              '<div class="bulk-item-name">' + escapeHtml(e.creditorName) + (e.billNo ? ' \u00B7 ' + escapeHtml(e.billNo) : '') + '</div>' +
+              '<div class="bulk-item-meta">' + escapeHtml(e.description || '') + (e.billDate ? ' \u00B7 ' + escapeHtml(e.billDate) : '') + '</div>' +
+            '</div>' +
+            '<div class="bulk-item-amt">' +
+              '<input type="number" class="bulk-amt-input" data-row="' + e.rowIndex + '" data-outstanding="' + outstanding + '" step="0.01" min="0" max="' + outstanding + '" value="' + outstanding + '">' +
+              '<div class="bulk-item-out">of ' + fmt(outstanding) + ' outstanding</div>' +
+            '</div>' +
+          '</div>';
+      }).join('');
+
+      list.querySelectorAll('.bulk-amt-input').forEach(function (inp) {
+        inp.addEventListener('input', updateBulkPayTotal);
+      });
+
+      document.getElementById('bp_paidDate').value = new Date().toISOString().slice(0, 10);
+      document.getElementById('bp_chequeNo').value = '';
+      document.getElementById('bp_chequeDueDate').value = '';
+      document.getElementById('bp_bankName').value = '';
+      setBulkPayMethod('Cheque');
+      updateBulkPayTotal();
+
+      document.getElementById('bulkPayOverlay').classList.add('show');
+      document.getElementById('bp_chequeNo').focus();
+    }
+
+    function closeBulkPayModal() {
+      document.getElementById('bulkPayOverlay').classList.remove('show');
+    }
+
+    function updateBulkPayTotal() {
+      var total = 0;
+      document.querySelectorAll('#bulkPayList .bulk-amt-input').forEach(function (inp) {
+        total += Number(inp.value) || 0;
+      });
+      document.getElementById('bulkPayTotal').textContent = fmt(total);
+    }
+
+    function setBulkPayMethod(method) {
+      document.getElementById('bulkPayOverlay').dataset.method = method;
+      document.getElementById('bp_methodCash').classList.toggle('active', method === 'Cash');
+      document.getElementById('bp_methodCheque').classList.toggle('active', method === 'Cheque');
+      document.getElementById('bulkChequeFields').classList.toggle('show', method === 'Cheque');
+    }
+
+    function saveBulkPayment() {
+      var paidDate = document.getElementById('bp_paidDate').value;
+      var paymentMethod = document.getElementById('bulkPayOverlay').dataset.method || 'Cheque';
+      var chequeNo = document.getElementById('bp_chequeNo').value.trim();
+      var chequeDueDate = document.getElementById('bp_chequeDueDate').value;
+      var bankName = document.getElementById('bp_bankName').value.trim();
+
+      if (paymentMethod === 'Cheque' && !chequeNo) {
+        showToast('Please enter the cheque number.', true);
+        document.getElementById('bp_chequeNo').focus();
+        return;
+      }
+
+      var lines = [];
+      var invalid = false;
+      document.querySelectorAll('#bulkPayList .bulk-amt-input').forEach(function (inp) {
+        var amt = Number(inp.value) || 0;
+        var outstanding = Number(inp.dataset.outstanding) || 0;
+        if (amt < 0 || amt > outstanding + 0.001) invalid = true;
+        if (amt > 0) lines.push({ rowIndex: Number(inp.dataset.row), paidAmount: amt });
+      });
+
+      if (invalid) {
+        showToast('Each amount must be between 0 and that bill\u2019s outstanding balance.', true);
+        return;
+      }
+      if (lines.length === 0) {
+        showToast('Enter at least one amount greater than 0.', true);
+        return;
+      }
+
+      var saveBtn = document.getElementById('bulkPaySave');
+      saveBtn.disabled = true;
+      saveBtn.textContent = 'Saving...';
+
+      // Each transaction is updated individually via the existing markAsPaid
+      // action, but all lines share the same paidDate / method / cheque
+      // details so they read back as one linked settlement (matched later by
+      // cheque number in the Cheque Details view).
+      Promise.all(lines.map(function (line) {
+        return apiCall('markAsPaid', {
+          rowIndex: line.rowIndex,
+          paidAmount: line.paidAmount,
+          paidDate: paidDate,
+          paymentMethod: paymentMethod,
+          chequeNo: paymentMethod === 'Cheque' ? chequeNo : '',
+          chequeDueDate: paymentMethod === 'Cheque' ? chequeDueDate : '',
+          bankName: paymentMethod === 'Cheque' ? bankName : ''
+        });
+      })).then(function (results) {
+        saveBtn.disabled = false;
+        saveBtn.textContent = 'Save Payment';
+        var failed = results.filter(function (r) { return !r || !r.success; }).length;
+        if (failed === 0) {
+          closeBulkPayModal();
+          selectedRows.clear();
+          showToast('Payment recorded across ' + lines.length + ' transaction' + (lines.length === 1 ? '' : 's') + '.');
+          loadData();
+        } else {
+          showToast(failed + ' of ' + lines.length + ' updates failed. Refreshing to show what saved.', true);
+          closeBulkPayModal();
+          loadData();
         }
       }).catch(function (err) {
         saveBtn.disabled = false;
