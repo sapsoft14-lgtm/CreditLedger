@@ -321,6 +321,48 @@
     .history-empty{color:var(--muted);font-size:13px;text-align:center;padding:30px 10px;}
     .history-btn{color:var(--navy);}
 
+    /* ---------- Login screen ---------- */
+    .login-wrap{
+      min-height:100vh;display:flex;align-items:center;justify-content:center;
+      background:var(--paper);padding:20px;
+    }
+    .login-card{
+      background:var(--surface);border:1px solid var(--line);border-radius:14px;
+      padding:28px 26px;width:100%;max-width:360px;box-shadow:0 20px 60px var(--shadow-color);
+    }
+    .login-brand{display:flex;align-items:center;gap:12px;margin-bottom:22px;}
+    .login-error{
+      background:var(--rust-bg);color:var(--rust);border-radius:8px;padding:9px 12px;
+      font-size:12.5px;font-weight:600;margin-bottom:14px;
+    }
+    .login-footer{text-align:center;margin-top:14px;}
+    .login-footer a{font-size:12px;color:var(--muted);text-decoration:none;}
+    .login-footer a:hover{color:var(--navy);text-decoration:underline;}
+
+    .session-badge{
+      font-size:11.5px;color:var(--bar-text);opacity:.75;margin-right:4px;
+      display:flex;align-items:center;gap:5px;
+    }
+    .session-badge .role-tag{
+      background:rgba(255,255,255,.14);padding:2px 8px;border-radius:20px;font-weight:700;
+      letter-spacing:.3px;text-transform:uppercase;font-size:9.5px;
+    }
+
+    .user-row{
+      display:flex;align-items:center;justify-content:space-between;gap:10px;
+      padding:12px 0;border-bottom:1px solid var(--line);
+    }
+    .user-row:last-child{border-bottom:none;}
+    .user-row-name{font-weight:600;font-size:13.5px;}
+    .user-row-meta{font-size:11.5px;color:var(--muted);margin-top:2px;}
+    .user-row-actions{display:flex;gap:6px;flex-shrink:0;}
+    .role-chip{
+      display:inline-block;padding:2px 8px;border-radius:20px;font-size:10px;font-weight:700;
+      text-transform:uppercase;letter-spacing:.3px;margin-left:8px;vertical-align:middle;
+    }
+    .role-chip.admin{background:var(--navy);color:#fff;}
+    .role-chip.customer{background:var(--teal-bg);color:var(--teal);}
+
     /* ---------- Toast ---------- */
     .toast{
       position:fixed;bottom:22px;left:50%;transform:translateX(-50%) translateY(20px);
@@ -398,6 +440,34 @@
 </head>
 <body>
 
+  <!-- Login Screen -->
+  <div class="login-wrap" id="loginScreen">
+    <div class="login-card">
+      <div class="login-brand">
+        <div class="brand-mark">SC</div>
+        <div class="brand-text">
+          <h1>Creditors Ledger</h1>
+          <p>SAP Computers (Pvt) Ltd &middot; Gampaha</p>
+        </div>
+      </div>
+      <div class="field">
+        <label for="login_username">Username</label>
+        <input type="text" id="login_username" autocomplete="username" placeholder="e.g. admin">
+      </div>
+      <div class="field">
+        <label for="login_password">Password</label>
+        <input type="password" id="login_password" autocomplete="current-password" placeholder="&bull;&bull;&bull;&bull;&bull;&bull;">
+      </div>
+      <div class="login-error" id="loginError" style="display:none;"></div>
+      <button class="btn btn-primary" id="loginBtn" style="width:100%;justify-content:center;">Log In</button>
+      <div class="login-footer">
+        <a href="#" id="loginSettingsLink">Web App not connected yet? Set it up</a>
+      </div>
+    </div>
+  </div>
+
+  <div id="mainApp" style="display:none;">
+
   <div class="topbar">
     <div class="brand">
       <div class="brand-mark">SC</div>
@@ -407,6 +477,10 @@
       </div>
     </div>
     <div class="topbar-actions">
+      <span class="session-badge" id="sessionBadge"></span>
+      <button class="btn btn-ghost-light btn-icon-only" id="manageUsersBtn" title="Manage Users" style="display:none;">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M17 21v-2a4 4 0 0 0-4-4H5a4 4 0 0 0-4 4v2"></path><circle cx="9" cy="7" r="4"></circle><path d="M23 21v-2a4 4 0 0 0-3-3.87"></path><path d="M16 3.13a4 4 0 0 1 0 7.75"></path></svg>
+      </button>
       <button class="btn btn-ghost-light btn-icon-only" id="themeToggleBtn" title="Toggle dark mode">
         <svg id="themeIcon" width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path></svg>
       </button>
@@ -416,6 +490,9 @@
       <button class="btn btn-ghost-light" id="refreshBtn" title="Refresh">
         <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="23 4 23 10 17 10"></polyline><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"></path></svg>
         Refresh
+      </button>
+      <button class="btn btn-ghost-light btn-icon-only" id="logoutBtn" title="Log out">
+        <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path><polyline points="16 17 21 12 16 7"></polyline><line x1="21" y1="12" x2="9" y2="12"></line></svg>
       </button>
     </div>
   </div>
@@ -799,6 +876,119 @@
     </div>
   </div>
 
+  <!-- Manage Users Modal (admin only) -->
+  <div class="overlay" id="usersOverlay">
+    <div class="modal modal-lg">
+      <div class="modal-head">
+        <h2>Manage Users</h2>
+        <button class="modal-close" id="usersClose">&times;</button>
+      </div>
+      <div class="modal-body">
+        <div class="helper" style="margin-bottom:14px;">Admin accounts can manage the whole ledger. Customer accounts are read-only and see only their own creditor record (matched by name).</div>
+        <button class="btn btn-primary btn-sm" id="userAddBtn" style="margin-bottom:14px;">+ Add User</button>
+        <div id="usersList"></div>
+      </div>
+      <div class="modal-foot">
+        <button class="btn btn-ghost" id="usersCloseBtn">Close</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- Add / Edit User Modal (admin only) -->
+  <div class="overlay" id="userFormOverlay">
+    <div class="modal modal-sm">
+      <div class="modal-head">
+        <h2 id="userFormTitle">Add User</h2>
+        <button class="modal-close" id="userFormClose">&times;</button>
+      </div>
+      <div class="modal-body">
+        <input type="hidden" id="uf_rowIndex">
+        <div class="field">
+          <label for="uf_username">Username</label>
+          <input type="text" id="uf_username" autocomplete="off">
+        </div>
+        <div class="field">
+          <label for="uf_password">Password</label>
+          <input type="text" id="uf_password" autocomplete="off" placeholder="Visible so you can share/remind it">
+        </div>
+        <div class="field">
+          <label for="uf_displayName">Display Name</label>
+          <input type="text" id="uf_displayName" autocomplete="off" placeholder="Shown after login (optional)">
+        </div>
+        <div class="field">
+          <label for="uf_role">Role</label>
+          <select id="uf_role">
+            <option value="Customer">Customer (read-only, own records)</option>
+            <option value="Admin">Admin (full access)</option>
+          </select>
+        </div>
+        <div class="field" id="uf_creditorField">
+          <label for="uf_creditorName">Linked Creditor</label>
+          <input type="text" id="uf_creditorName" list="creditorList" autocomplete="off" placeholder="Must match the creditor name in the ledger">
+        </div>
+      </div>
+      <div class="modal-foot">
+        <button class="btn btn-ghost" id="userFormCancel">Cancel</button>
+        <button class="btn btn-primary" id="userFormSave">Save</button>
+      </div>
+    </div>
+  </div>
+
+  </div><!-- /#mainApp -->
+
+  <!-- Customer Dashboard (read-only) -->
+  <div id="customerApp" style="display:none;">
+    <div class="topbar">
+      <div class="brand">
+        <div class="brand-mark">SC</div>
+        <div class="brand-text">
+          <h1 id="custHeading">My Credit Account</h1>
+          <p>SAP Computers (Pvt) Ltd &middot; Gampaha</p>
+        </div>
+      </div>
+      <div class="topbar-actions">
+        <span class="session-badge" id="custSessionBadge"></span>
+        <button class="btn btn-ghost-light" id="custRefreshBtn" title="Refresh">
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="23 4 23 10 17 10"></polyline><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"></path></svg>
+          Refresh
+        </button>
+        <button class="btn btn-ghost-light btn-icon-only" id="custLogoutBtn" title="Log out">
+          <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M9 21H5a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h4"></path><polyline points="16 17 21 12 16 7"></polyline><line x1="21" y1="12" x2="9" y2="12"></line></svg>
+        </button>
+      </div>
+    </div>
+    <div class="wrap">
+      <div class="stats">
+        <div class="stub total">
+          <div class="stub-label">Total Billed</div>
+          <div class="stub-value mono" id="cust_statTotal">Rs 0</div>
+        </div>
+        <div class="stub paid">
+          <div class="stub-label">Total Paid</div>
+          <div class="stub-value mono" id="cust_statPaid">Rs 0</div>
+        </div>
+        <div class="stub outstanding">
+          <div class="stub-label">Outstanding</div>
+          <div class="stub-value mono" id="cust_statOutstanding">Rs 0</div>
+        </div>
+      </div>
+      <div class="table-card">
+        <div style="overflow-x:auto;">
+          <table>
+            <thead>
+              <tr>
+                <th>Bill No</th><th>Bill Date</th><th>Description</th>
+                <th class="num">Bill Amount</th><th class="num">Paid</th><th class="num">Outstanding</th>
+                <th>Status</th><th></th>
+              </tr>
+            </thead>
+            <tbody id="custTableBody"></tbody>
+          </table>
+        </div>
+      </div>
+    </div>
+  </div>
+
   <div class="toast" id="toast"></div>
 
   <script>
@@ -814,6 +1004,8 @@
 
     var STORAGE_KEY = 'sapCreditorsWebAppUrl';
     var THEME_STORAGE_KEY = 'sapCreditorsTheme';
+    var SESSION_STORAGE_KEY = 'sapCreditorsSession';
+    var currentUser = null; // { token, role, username, displayName, creditorName }
     var allEntries = [];
     var lastFiltered = [];
     var selectedRows = new Set();
@@ -903,7 +1095,29 @@
       document.getElementById('themeToggleBtn').addEventListener('click', toggleTheme);
 
       document.getElementById('s_webAppUrl').value = getWebAppUrl();
-      checkConnection();
+      initAuth();
+
+      document.getElementById('loginBtn').addEventListener('click', doLogin);
+      document.getElementById('login_password').addEventListener('keydown', function (e) { if (e.key === 'Enter') doLogin(); });
+      document.getElementById('login_username').addEventListener('keydown', function (e) { if (e.key === 'Enter') doLogin(); });
+      document.getElementById('loginSettingsLink').addEventListener('click', function (e) {
+        e.preventDefault();
+        openSettings();
+      });
+      document.getElementById('logoutBtn').addEventListener('click', doLogout);
+      document.getElementById('custLogoutBtn').addEventListener('click', doLogout);
+      document.getElementById('custRefreshBtn').addEventListener('click', loadMyData);
+
+      document.getElementById('manageUsersBtn').addEventListener('click', openUsersModal);
+      document.getElementById('usersClose').addEventListener('click', closeUsersModal);
+      document.getElementById('usersCloseBtn').addEventListener('click', closeUsersModal);
+      document.getElementById('userAddBtn').addEventListener('click', function () { openUserForm(); });
+      document.getElementById('userFormClose').addEventListener('click', closeUserForm);
+      document.getElementById('userFormCancel').addEventListener('click', closeUserForm);
+      document.getElementById('userFormSave').addEventListener('click', saveUser);
+      document.getElementById('uf_role').addEventListener('change', function () {
+        document.getElementById('uf_creditorField').style.display = (this.value === 'Customer') ? 'block' : 'none';
+      });
 
       document.getElementById('refreshBtn').addEventListener('click', loadData);
       document.getElementById('addBtn').addEventListener('click', openAddModal);
@@ -932,7 +1146,11 @@
         var url = document.getElementById('s_webAppUrl').value.trim();
         setWebAppUrl(url);
         closeSettings();
-        checkConnection();
+        if (currentUser) {
+          checkConnection();
+        } else {
+          showToast('Web App URL saved. You can log in now.');
+        }
       });
 
       document.getElementById('entryClose').addEventListener('click', closeEntryModal);
@@ -1004,6 +1222,134 @@
       loadData();
     }
 
+    /* ---------- Auth: session bootstrap, login, logout, routing ---------- */
+    function getStoredSession() {
+      try {
+        var raw = localStorage.getItem(SESSION_STORAGE_KEY);
+        return raw ? JSON.parse(raw) : null;
+      } catch (e) { return null; }
+    }
+    function storeSession(session) {
+      localStorage.setItem(SESSION_STORAGE_KEY, JSON.stringify(session));
+    }
+    function clearStoredSession() {
+      localStorage.removeItem(SESSION_STORAGE_KEY);
+    }
+
+    function initAuth() {
+      if (!getWebAppUrl()) {
+        showLoginScreen();
+        return;
+      }
+      var saved = getStoredSession();
+      if (!saved || !saved.token) {
+        showLoginScreen();
+        return;
+      }
+      currentUser = saved;
+      apiCall('validateSession', {}).then(function (res) {
+        if (res && res.success) {
+          currentUser = {
+            token: saved.token, role: res.role, username: res.username,
+            displayName: res.displayName, creditorName: res.creditorName
+          };
+          storeSession(currentUser);
+          routeAfterLogin();
+        } else {
+          currentUser = null;
+          clearStoredSession();
+          showLoginScreen();
+        }
+      }).catch(function () {
+        currentUser = null;
+        showLoginScreen();
+      });
+    }
+
+    function showLoginScreen() {
+      document.getElementById('mainApp').style.display = 'none';
+      document.getElementById('customerApp').style.display = 'none';
+      document.getElementById('loginScreen').style.display = 'flex';
+      document.getElementById('login_username').focus();
+    }
+
+    function doLogin() {
+      var username = document.getElementById('login_username').value.trim();
+      var password = document.getElementById('login_password').value;
+      var errBox = document.getElementById('loginError');
+      errBox.style.display = 'none';
+
+      if (!getWebAppUrl()) {
+        errBox.textContent = 'Set up your Web App URL first (link below).';
+        errBox.style.display = 'block';
+        return;
+      }
+      if (!username || !password) {
+        errBox.textContent = 'Enter both username and password.';
+        errBox.style.display = 'block';
+        return;
+      }
+
+      var btn = document.getElementById('loginBtn');
+      btn.disabled = true;
+      btn.textContent = 'Logging in\u2026';
+
+      apiCall('login', { username: username, password: password }).then(function (res) {
+        btn.disabled = false;
+        btn.textContent = 'Log In';
+        if (!res || !res.success) {
+          errBox.textContent = (res && res.error) || 'Could not log in.';
+          errBox.style.display = 'block';
+          return;
+        }
+        currentUser = {
+          token: res.token, role: res.role, username: res.username,
+          displayName: res.displayName, creditorName: res.creditorName
+        };
+        storeSession(currentUser);
+        document.getElementById('login_password').value = '';
+        routeAfterLogin();
+      }).catch(function (err) {
+        btn.disabled = false;
+        btn.textContent = 'Log In';
+        errBox.textContent = err.message || 'Could not reach the server.';
+        errBox.style.display = 'block';
+      });
+    }
+
+    function doLogout() {
+      var token = currentUser && currentUser.token;
+      currentUser = null;
+      clearStoredSession();
+      if (token) apiCall('logout', { token: token }).catch(function () {});
+      document.getElementById('loginScreen').style.display = 'flex';
+      document.getElementById('mainApp').style.display = 'none';
+      document.getElementById('customerApp').style.display = 'none';
+      document.getElementById('login_username').value = '';
+      document.getElementById('login_password').value = '';
+      document.getElementById('loginError').style.display = 'none';
+    }
+
+    function routeAfterLogin() {
+      document.getElementById('loginScreen').style.display = 'none';
+
+      if (currentUser.role === 'Admin') {
+        document.getElementById('customerApp').style.display = 'none';
+        document.getElementById('mainApp').style.display = 'block';
+        document.getElementById('manageUsersBtn').style.display = 'inline-flex';
+        document.getElementById('sessionBadge').innerHTML =
+          escapeHtml(currentUser.displayName || currentUser.username) + ' <span class="role-tag">Admin</span>';
+        checkConnection();
+      } else {
+        document.getElementById('mainApp').style.display = 'none';
+        document.getElementById('customerApp').style.display = 'block';
+        document.getElementById('custSessionBadge').innerHTML =
+          escapeHtml(currentUser.displayName || currentUser.username) + ' <span class="role-tag">Customer</span>';
+        document.getElementById('custHeading').textContent = currentUser.creditorName ? currentUser.creditorName : 'My Credit Account';
+        loadMyData();
+      }
+    }
+
     function openSettings() {
       document.getElementById('s_webAppUrl').value = getWebAppUrl();
       document.getElementById('settingsOverlay').classList.add('show');
@@ -1016,11 +1362,15 @@
     function apiCall(action, payload) {
       var url = getWebAppUrl();
       if (!url) return Promise.reject(new Error('Web App URL is not set. Click the gear icon to connect it.'));
+      var body = payload || {};
+      if (action !== 'login' && currentUser && currentUser.token) {
+        body = Object.assign({}, body, { token: currentUser.token });
+      }
       // text/plain avoids a CORS preflight request, which Apps Script Web Apps don't support.
       return fetch(url, {
         method: 'POST',
         headers: { 'Content-Type': 'text/plain;charset=utf-8' },
-        body: JSON.stringify({ action: action, payload: payload || {} })
+        body: JSON.stringify({ action: action, payload: body })
       }).then(function (res) {
         if (!res.ok) throw new Error('Server responded with ' + res.status);
         return res.json();
@@ -1037,6 +1387,191 @@
       }).catch(function (err) {
         showToast(err.message, true);
         document.getElementById('tableBody').innerHTML = '<tr class="loading-row"><td colspan="10">Failed to load. Check your Web App URL and try Refresh.</td></tr>';
+      });
+    }
+
+    /** Customer dashboard: read-only view scoped to the logged-in customer's
+     * own creditor record. Reuses allEntries/fmt/escapeHtml/statusOf/openChequeView/
+     * openPaymentHistory so cheque details & payment history work unchanged. */
+    function loadMyData() {
+      document.getElementById('custTableBody').innerHTML = '<tr class="loading-row"><td colspan="8">Loading your account...</td></tr>';
+      apiCall('getMyCreditorData', {}).then(function (res) {
+        if (!res.success) throw new Error(res.error || 'Could not load your account.');
+        allEntries = res.data || [];
+        renderCustomerTable();
+      }).catch(function (err) {
+        showToast(err.message, true);
+        document.getElementById('custTableBody').innerHTML = '<tr class="loading-row"><td colspan="8">Failed to load. Try Refresh.</td></tr>';
+      });
+    }
+
+    function renderCustomerTable() {
+      var totalBill = 0, totalPaid = 0;
+      allEntries.forEach(function (e) { totalBill += e.billAmount; totalPaid += e.paidAmount; });
+      var totalOutstanding = Math.max(totalBill - totalPaid, 0);
+      document.getElementById('cust_statTotal').textContent = fmt(totalBill);
+      document.getElementById('cust_statPaid').textContent = fmt(totalPaid);
+      document.getElementById('cust_statOutstanding').textContent = fmt(totalOutstanding);
+
+      var body = document.getElementById('custTableBody');
+      if (allEntries.length === 0) {
+        body.innerHTML = '<tr><td colspan="8"><div class="empty-state"><h3>No bills yet</h3><p>Nothing has been recorded against your account.</p></div></td></tr>';
+        return;
+      }
+
+      var sorted = allEntries.slice().sort(function (a, b) { return b.rowIndex - a.rowIndex; });
+      body.innerHTML = sorted.map(function (e) {
+        var outstanding = Math.max(e.billAmount - e.paidAmount, 0);
+        var status = statusOf(e);
+        var statusLabel = status === 'paid' ? 'Paid' : status === 'partial' ? 'Partial' : 'Unpaid';
+        return '' +
+          '<tr>' +
+            '<td class="mono" data-label="Bill No">' + escapeHtml(e.billNo) + '</td>' +
+            '<td class="mono" data-label="Bill Date">' + escapeHtml(e.billDate) + '</td>' +
+            '<td class="desc-cell" data-label="Description" title="' + escapeHtml(e.description) + '">' + escapeHtml(e.description) + '</td>' +
+            '<td class="num mono" data-label="Bill Amount">' + fmt(e.billAmount) + '</td>' +
+            '<td class="num mono" data-label="Paid">' + fmt(e.paidAmount) + '</td>' +
+            '<td class="num mono" data-label="Outstanding">' + fmt(outstanding) + '</td>' +
+            '<td data-label="Status"><span class="status-pill status-' + status + '"><span class="status-dot"></span>' + statusLabel + '</span>' +
+              (e.paymentMethod === 'Cheque' ? '<button type="button" class="cheque-badge" title="View cheque details" data-action="view-cheque" data-row="' + e.rowIndex + '">' +
+                '<svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><rect x="2" y="5" width="20" height="14" rx="2"></rect><path d="M2 10h20"></path></svg>Cheque</button>' : '') +
+            '</td>' +
+            '<td>' + (e.paidAmount > 0 ? '<button class="icon-btn history-btn" title="Payment history" data-action="history" data-row="' + e.rowIndex + '">' +
+              '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"></circle><polyline points="12 7 12 12 16 14"></polyline></svg>' +
+            '</button>' : '') + '</td>' +
+          '</tr>';
+      }).join('');
+
+      body.querySelectorAll('[data-action="view-cheque"]').forEach(function (btn) {
+        btn.addEventListener('click', function (evt) { evt.stopPropagation(); openChequeView(Number(btn.dataset.row)); });
+      });
+      body.querySelectorAll('[data-action="history"]').forEach(function (btn) {
+        btn.addEventListener('click', function (evt) { evt.stopPropagation(); openPaymentHistory(Number(btn.dataset.row)); });
+      });
+    }
+
+    /* ---------- Manage Users (admin only) ---------- */
+    var usersCache = [];
+
+    function openUsersModal() {
+      document.getElementById('usersOverlay').classList.add('show');
+      document.getElementById('usersList').innerHTML = '<div class="history-empty">Loading&hellip;</div>';
+      apiCall('getAllUsers', {}).then(function (res) {
+        if (!res.success) throw new Error(res.error || 'Could not load users.');
+        usersCache = res.data || [];
+        renderUsersList();
+      }).catch(function (err) {
+        document.getElementById('usersList').innerHTML = '<div class="history-empty">' + escapeHtml(err.message) + '</div>';
+      });
+    }
+
+    function closeUsersModal() {
+      document.getElementById('usersOverlay').classList.remove('show');
+    }
+
+    function renderUsersList() {
+      var list = document.getElementById('usersList');
+      if (usersCache.length === 0) {
+        list.innerHTML = '<div class="history-empty">No users yet.</div>';
+        return;
+      }
+      list.innerHTML = usersCache.map(function (u) {
+        var roleClass = u.role === 'Admin' ? 'admin' : 'customer';
+        var meta = u.role === 'Admin' ? 'Admin access' : ('Linked to: ' + (u.creditorName || '\u2014'));
+        return '' +
+          '<div class="user-row">' +
+            '<div>' +
+              '<div class="user-row-name">' + escapeHtml(u.username) + '<span class="role-chip ' + roleClass + '">' + escapeHtml(u.role) + '</span></div>' +
+              '<div class="user-row-meta">' + escapeHtml(u.displayName || '') + (u.displayName ? ' \u00B7 ' : '') + escapeHtml(meta) + '</div>' +
+            '</div>' +
+            '<div class="user-row-actions">' +
+              '<button class="icon-btn" title="Edit" data-action="edit-user" data-row="' + u.rowIndex + '">' +
+                '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M11 4H4a2 2 0 0 0-2 2v14a2 2 0 0 0 2 2h14a2 2 0 0 0 2-2v-7"></path><path d="M18.5 2.5a2.12 2.12 0 0 1 3 3L12 15l-4 1 1-4Z"></path></svg>' +
+              '</button>' +
+              '<button class="icon-btn del-btn" title="Delete" data-action="delete-user" data-row="' + u.rowIndex + '">' +
+                '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><polyline points="3 6 5 6 21 6"></polyline><path d="M19 6l-1 14a2 2 0 0 1-2 2H8a2 2 0 0 1-2-2L5 6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path></svg>' +
+              '</button>' +
+            '</div>' +
+          '</div>';
+      }).join('');
+
+      list.querySelectorAll('[data-action="edit-user"]').forEach(function (btn) {
+        btn.addEventListener('click', function () { openUserForm(Number(btn.dataset.row)); });
+      });
+      list.querySelectorAll('[data-action="delete-user"]').forEach(function (btn) {
+        btn.addEventListener('click', function () { deleteUserRow(Number(btn.dataset.row)); });
+      });
+    }
+
+    function openUserForm(rowIndex) {
+      var isEdit = !!rowIndex;
+      var u = isEdit ? usersCache.find(function (x) { return x.rowIndex === rowIndex; }) : null;
+
+      document.getElementById('userFormTitle').textContent = isEdit ? 'Edit User' : 'Add User';
+      document.getElementById('uf_rowIndex').value = isEdit ? rowIndex : '';
+      document.getElementById('uf_username').value = u ? u.username : '';
+      document.getElementById('uf_password').value = u ? u.password : '';
+      document.getElementById('uf_displayName').value = u ? u.displayName : '';
+      document.getElementById('uf_role').value = u ? u.role : 'Customer';
+      document.getElementById('uf_creditorName').value = u ? u.creditorName : '';
+      document.getElementById('uf_creditorField').style.display = (!u || u.role === 'Customer') ? 'block' : 'none';
+
+      document.getElementById('userFormOverlay').classList.add('show');
+      document.getElementById('uf_username').focus();
+    }
+
+    function closeUserForm() {
+      document.getElementById('userFormOverlay').classList.remove('show');
+    }
+
+    function saveUser() {
+      var rowIndex = document.getElementById('uf_rowIndex').value;
+      var payload = {
+        username: document.getElementById('uf_username').value.trim(),
+        password: document.getElementById('uf_password').value,
+        displayName: document.getElementById('uf_displayName').value.trim(),
+        role: document.getElementById('uf_role').value,
+        creditorName: document.getElementById('uf_creditorName').value.trim()
+      };
+
+      var saveBtn = document.getElementById('userFormSave');
+      saveBtn.disabled = true;
+      saveBtn.textContent = 'Saving...';
+
+      var action = rowIndex ? 'updateUser' : 'addUser';
+      if (rowIndex) payload.rowIndex = Number(rowIndex);
+
+      apiCall(action, payload).then(function (res) {
+        saveBtn.disabled = false;
+        saveBtn.textContent = 'Save';
+        if (res && res.success) {
+          closeUserForm();
+          showToast('User saved.');
+          openUsersModal();
+        } else {
+          showToast((res && res.error) || 'Could not save the user.', true);
+        }
+      }).catch(function (err) {
+        saveBtn.disabled = false;
+        saveBtn.textContent = 'Save';
+        showToast(err.message || 'Could not save the user.', true);
+      });
+    }
+
+    function deleteUserRow(rowIndex) {
+      var u = usersCache.find(function (x) { return x.rowIndex === rowIndex; });
+      if (!u) return;
+      if (!confirm('Delete the login account "' + u.username + '"? This can\'t be undone.')) return;
+
+      apiCall('deleteUser', { rowIndex: rowIndex }).then(function (res) {
+        if (res && res.success) {
+          showToast('User deleted.');
+          openUsersModal();
+        } else {
+          showToast((res && res.error) || 'Could not delete the user.', true);
+        }
+      }).catch(function (err) {
+        showToast(err.message || 'Could not delete the user.', true);
       });
     }
 
