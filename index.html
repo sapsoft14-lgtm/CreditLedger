@@ -312,6 +312,14 @@
     .linked-tx-item:last-child{border-bottom:none;}
     .linked-tx-item .nm{color:var(--ink);font-weight:600;}
     .linked-tx-item .amt{font-family:'IBM Plex Mono',monospace;color:var(--muted);}
+    .history-item{display:flex;justify-content:space-between;align-items:flex-start;gap:10px;padding:10px 0;border-bottom:1px dashed var(--line);}
+    .history-item:last-child{border-bottom:none;}
+    .history-item .h-when{font-size:12px;color:var(--muted);}
+    .history-item .h-when .h-time{font-family:'IBM Plex Mono',monospace;color:var(--ink);font-weight:600;}
+    .history-item .h-meta{font-size:11.5px;color:var(--muted);margin-top:2px;}
+    .history-item .h-amt{font-family:'IBM Plex Mono',monospace;font-weight:700;color:var(--teal);text-align:right;white-space:nowrap;}
+    .history-empty{color:var(--muted);font-size:13px;text-align:center;padding:30px 10px;}
+    .history-btn{color:var(--navy);}
 
     /* ---------- Toast ---------- */
     .toast{
@@ -674,6 +682,28 @@
     </div>
   </div>
 
+  <!-- View Payment History Modal -->
+  <div class="overlay" id="historyOverlay">
+    <div class="modal modal-sm">
+      <div class="modal-head">
+        <h2>Payment History</h2>
+        <button class="modal-close" id="historyClose">&times;</button>
+      </div>
+      <div class="modal-body">
+        <div class="cheque-view-row" style="margin-bottom:12px;">
+          <span class="label">Creditor</span>
+          <span class="val" id="hist_creditorName">&mdash;</span>
+        </div>
+        <div id="historyList"></div>
+        <div class="history-empty" id="historyEmpty" style="display:none;">No payments recorded yet.</div>
+        <div class="history-empty" id="historyLoading" style="display:none;">Loading&hellip;</div>
+      </div>
+      <div class="modal-foot">
+        <button class="btn btn-ghost" id="historyCloseBtn">Close</button>
+      </div>
+    </div>
+  </div>
+
   <!-- Bulk Settlement Modal (one cheque/payment across multiple transactions) -->
   <div class="overlay" id="bulkPayOverlay">
     <div class="modal modal-lg">
@@ -926,6 +956,8 @@
 
       document.getElementById('chequeViewClose').addEventListener('click', closeChequeView);
       document.getElementById('chequeViewCloseBtn').addEventListener('click', closeChequeView);
+      document.getElementById('historyClose').addEventListener('click', closePaymentHistory);
+      document.getElementById('historyCloseBtn').addEventListener('click', closePaymentHistory);
       document.getElementById('searchInput').addEventListener('input', function (e) {
         currentSearch = e.target.value.toLowerCase();
         render();
@@ -938,7 +970,7 @@
           render();
         });
       });
-      [document.getElementById('entryOverlay'), document.getElementById('payOverlay'), document.getElementById('settingsOverlay'), document.getElementById('chequeViewOverlay'), document.getElementById('bulkPayOverlay')].forEach(function (ov) {
+      [document.getElementById('entryOverlay'), document.getElementById('payOverlay'), document.getElementById('settingsOverlay'), document.getElementById('chequeViewOverlay'), document.getElementById('historyOverlay'), document.getElementById('bulkPayOverlay')].forEach(function (ov) {
         ov.addEventListener('click', function (e) { if (e.target === ov) ov.classList.remove('show'); });
       });
 
@@ -1150,6 +1182,9 @@
       body.querySelectorAll('[data-action="view-cheque"]').forEach(function (btn) {
         btn.addEventListener('click', function (evt) { evt.stopPropagation(); openChequeView(Number(btn.dataset.row)); });
       });
+      body.querySelectorAll('[data-action="history"]').forEach(function (btn) {
+        btn.addEventListener('click', function (evt) { evt.stopPropagation(); openPaymentHistory(Number(btn.dataset.row)); });
+      });
       body.querySelectorAll('.row-check').forEach(function (chk) {
         chk.addEventListener('change', function () {
           var row = Number(chk.dataset.row);
@@ -1246,6 +1281,9 @@
           '</td>' +
           '<td>' +
             '<div class="row-actions">' +
+              (e.paidAmount > 0 ? '<button class="icon-btn history-btn" title="Payment history" data-action="history" data-row="' + e.rowIndex + '">' +
+                '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="9"></circle><polyline points="12 7 12 12 16 14"></polyline></svg>' +
+              '</button>' : '') +
               '<button class="icon-btn pay-btn" title="Record payment" data-action="pay" data-row="' + e.rowIndex + '">' +
                 '<svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2v20M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"></path></svg>' +
               '</button>' +
@@ -1402,6 +1440,10 @@
       document.getElementById('p_paidAmount').value = outstanding;
       document.getElementById('p_paidAmount').dataset.full = outstanding;
       document.getElementById('p_paidDate').value = new Date().toISOString().slice(0, 10);
+      // Each payment recorded here is a NEW, separate payment added on top of
+      // whatever was already paid (see savePayment) — so start blank rather
+      // than reusing the previous payment's cheque details, which likely
+      // belong to a different cheque.
       document.getElementById('p_chequeNo').value = '';
       document.getElementById('p_chequeDueDate').value = '';
       document.getElementById('p_bankName').value = '';
@@ -1438,9 +1480,13 @@
       var linkedList = document.getElementById('cv_linkedList');
       var linked = [];
       if (e.chequeNo) {
+        // Sheets can store the cheque number as a number instead of text, so
+        // coerce to a string before trim()/toLowerCase() or this throws.
+        var eChequeNo = String(e.chequeNo).trim().toLowerCase();
         linked = allEntries.filter(function (x) {
-          return x.rowIndex !== e.rowIndex && x.paymentMethod === 'Cheque' && (x.chequeNo || '').trim() !== '' &&
-            (x.chequeNo || '').trim().toLowerCase() === (e.chequeNo || '').trim().toLowerCase();
+          var xChequeNo = String(x.chequeNo || '').trim().toLowerCase();
+          return x.rowIndex !== e.rowIndex && x.paymentMethod === 'Cheque' && xChequeNo !== '' &&
+            xChequeNo === eChequeNo;
         });
       }
       if (linked.length > 0) {
@@ -1461,6 +1507,57 @@
       document.getElementById('chequeViewOverlay').classList.remove('show');
     }
 
+    /** Shows the full log of individual payments (each with its own date &
+     * time) recorded against a bill \u2014 this is what lets you see, for a
+     * partially-paid transaction, exactly when each installment came in. */
+    function openPaymentHistory(rowIndex) {
+      var e = allEntries.find(function (x) { return x.rowIndex === rowIndex; });
+      if (!e) return;
+      document.getElementById('hist_creditorName').textContent = e.creditorName + (e.billNo ? ' \u00B7 ' + e.billNo : '');
+
+      var list = document.getElementById('historyList');
+      var empty = document.getElementById('historyEmpty');
+      var loading = document.getElementById('historyLoading');
+      list.innerHTML = '';
+      empty.style.display = 'none';
+      loading.style.display = 'block';
+      document.getElementById('historyOverlay').classList.add('show');
+
+      apiCall('getPaymentHistory', { rowIndex: rowIndex }).then(function (res) {
+        loading.style.display = 'none';
+        var entries = (res && res.success && res.data) || [];
+        if (entries.length === 0) {
+          empty.style.display = 'block';
+          return;
+        }
+        list.innerHTML = entries.map(function (p) {
+          var parts = String(p.timestamp || '').split(' ');
+          var datePart = parts[0] || '\u2014';
+          var timePart = parts[1] || '';
+          var methodBits = [];
+          if (p.paymentMethod) methodBits.push(p.paymentMethod);
+          if (p.paymentMethod === 'Cheque' && p.chequeNo) methodBits.push('#' + p.chequeNo);
+          if (p.paymentMethod === 'Cheque' && p.bankName) methodBits.push(p.bankName);
+          return '' +
+            '<div class="history-item">' +
+              '<div>' +
+                '<div class="h-when">' + escapeHtml(datePart) + (timePart ? ' &middot; <span class="h-time">' + escapeHtml(timePart) + '</span>' : '') + '</div>' +
+                '<div class="h-meta">' + escapeHtml(methodBits.join(' \u00B7 ')) + '</div>' +
+              '</div>' +
+              '<div class="h-amt">' + fmt(p.amount) + '</div>' +
+            '</div>';
+        }).join('');
+      }).catch(function (err) {
+        loading.style.display = 'none';
+        empty.style.display = 'block';
+        empty.textContent = err.message || 'Could not load payment history.';
+      });
+    }
+
+    function closePaymentHistory() {
+      document.getElementById('historyOverlay').classList.remove('show');
+    }
+
     /** Switches the Record Payment modal between Cash and Cheque, toggling the extra fields */
     function setPayMethod(method) {
       document.getElementById('payOverlay').dataset.method = method;
@@ -1471,7 +1568,17 @@
 
     function savePayment() {
       var rowIndex = Number(document.getElementById('p_rowIndex').value);
-      var paidAmount = document.getElementById('p_paidAmount').value || 0;
+      var entry = allEntries.find(function (x) { return x.rowIndex === rowIndex; });
+      if (!entry) { showToast('That row no longer exists. Refresh and try again.', true); return; }
+
+      var amountNow = Number(document.getElementById('p_paidAmount').value || 0);
+      if (amountNow < 0) amountNow = 0;
+      // The field is "how much are you paying right now" (defaults to the
+      // outstanding balance), not the new running total \u2014 so add it to
+      // whatever was already paid before sending it to the backend, which
+      // stores an absolute total in the Paid Amount column.
+      var newTotalPaid = (entry.paidAmount || 0) + amountNow;
+
       var paidDate = document.getElementById('p_paidDate').value;
       var paymentMethod = document.getElementById('payOverlay').dataset.method || 'Cash';
       var chequeNo = document.getElementById('p_chequeNo').value.trim();
@@ -1490,7 +1597,8 @@
 
       apiCall('markAsPaid', {
         rowIndex: rowIndex,
-        paidAmount: paidAmount,
+        paidAmount: newTotalPaid,
+        amountPaidNow: amountNow,
         paidDate: paidDate,
         paymentMethod: paymentMethod,
         chequeNo: paymentMethod === 'Cheque' ? chequeNo : '',
@@ -1591,7 +1699,15 @@
         var amt = Number(inp.value) || 0;
         var outstanding = Number(inp.dataset.outstanding) || 0;
         if (amt < 0 || amt > outstanding + 0.001) invalid = true;
-        if (amt > 0) lines.push({ rowIndex: Number(inp.dataset.row), paidAmount: amt });
+        if (amt > 0) {
+          var rowIndex = Number(inp.dataset.row);
+          var existingEntry = allEntries.find(function (x) { return x.rowIndex === rowIndex; });
+          // amt is "how much is being paid now" against this bill; add it to
+          // whatever was already paid, since the backend stores an absolute
+          // total rather than accumulating payments itself.
+          var newTotalPaid = (existingEntry ? existingEntry.paidAmount : 0) + amt;
+          lines.push({ rowIndex: rowIndex, paidAmount: newTotalPaid, amountPaidNow: amt });
+        }
       });
 
       if (invalid) {
@@ -1615,6 +1731,7 @@
         return apiCall('markAsPaid', {
           rowIndex: line.rowIndex,
           paidAmount: line.paidAmount,
+          amountPaidNow: line.amountPaidNow,
           paidDate: paidDate,
           paymentMethod: paymentMethod,
           chequeNo: paymentMethod === 'Cheque' ? chequeNo : '',
