@@ -2442,6 +2442,29 @@
       win.document.close();
     }
 
+    /* ---------- FIXED: PDF generation ----------
+     * The previous version rendered the report into a container positioned
+     * at left:-9999px (off-screen). html2canvas frequently fails to
+     * rasterize elements that sit outside the viewport/clip area like that
+     * -- it produces a canvas that is technically the right size but has
+     * nothing painted onto it, which is exactly the "blank white page" PDF
+     * bug. It was also relying on a `body { ... }` CSS rule from
+     * REPORT_STYLES to set the page's font/background/padding, but that
+     * selector only ever matched the *real* document body, not the
+     * offscreen <div> being captured -- so the captured node had no
+     * explicit background/font styling of its own either.
+     *
+     * Fix:
+     *  1. Keep the render container fully on-screen (top:0; left:0) but
+     *     make it invisible via opacity:0 + pointer-events:none, using a
+     *     high negative z-index so it never becomes visible to the user.
+     *     This keeps it inside html2canvas's normal capture path.
+     *  2. Give the container its own explicit background/font/padding
+     *     instead of depending on a `body` selector that can't reach it.
+     *  3. Pass explicit scrollX/scrollY/windowWidth/windowHeight to
+     *     html2canvas so it captures from the container's own origin
+     *     rather than the page's current scroll position.
+     */
     function downloadReportPdf(entries, title) {
       if (!entries || entries.length === 0) {
         showToast('No entries to include in the PDF.', true);
@@ -2457,11 +2480,29 @@
       document.getElementById('rc_printBtn').disabled = true;
 
       var report = buildReportBody(entries, title);
+
+      // Container stays in the normal document flow (not off-screen), but is
+      // made invisible so the user never sees it flash on screen. This is
+      // what makes html2canvas reliably paint content into the PDF instead
+      // of producing a blank page.
       var container = document.createElement('div');
+      container.setAttribute('id', 'pdfReportRoot');
       container.style.position = 'fixed';
-      container.style.left = '-9999px';
       container.style.top = '0';
+      container.style.left = '0';
       container.style.width = '780px';
+      container.style.zIndex = '-1';
+      container.style.opacity = '0';
+      container.style.pointerEvents = 'none';
+      // Explicit styling on the captured root itself, since the injected
+      // <style> tag's `body{...}` rule can't target this non-body element.
+      container.style.background = '#ffffff';
+      container.style.color = '#1C2333';
+      container.style.fontFamily = 'Arial, Helvetica, sans-serif';
+      container.style.fontSize = '12.5px';
+      container.style.padding = '24px';
+      container.style.boxSizing = 'border-box';
+
       var styleTag = document.createElement('style');
       styleTag.textContent = REPORT_STYLES;
       container.appendChild(styleTag);
@@ -2472,33 +2513,48 @@
 
       var filename = (title || 'Report').replace(/[^a-z0-9]+/gi, '_') + '_' + new Date().toISOString().slice(0, 10) + '.pdf';
 
-      html2pdf().set({
-        margin: 10,
-        filename: filename,
-        image: { type: 'jpeg', quality: 0.98 },
-        html2canvas: { scale: 2, useCORS: true, backgroundColor: '#ffffff' },
-        jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' },
-        pagebreak: { mode: ['css', 'legacy'] }
-      }).from(container).save().then(function () {
-        document.body.removeChild(container);
-        generating.classList.remove('show');
-        document.getElementById('rc_pdfBtn').disabled = false;
-        document.getElementById('rc_printBtn').disabled = false;
-        closeReportChoice();
-        showToast('PDF downloaded.');
-      }).catch(function () {
-        document.body.removeChild(container);
-        generating.classList.remove('show');
-        document.getElementById('rc_pdfBtn').disabled = false;
-        document.getElementById('rc_printBtn').disabled = false;
-        showToast('Could not generate the PDF.', true);
+      // Give the browser a paint frame before handing the node to
+      // html2canvas -- helps ensure webfonts/layout have settled so the
+      // capture isn't taken before content is actually rendered.
+      requestAnimationFrame(function () {
+        setTimeout(function () {
+          html2pdf().set({
+            margin: 10,
+            filename: filename,
+            image: { type: 'jpeg', quality: 0.98 },
+            html2canvas: {
+              scale: 2,
+              useCORS: true,
+              backgroundColor: '#ffffff',
+              scrollX: 0,
+              scrollY: 0,
+              windowWidth: container.scrollWidth || 780,
+              windowHeight: container.scrollHeight
+            },
+            jsPDF: { unit: 'mm', format: 'a4', orientation: 'portrait' },
+            pagebreak: { mode: ['css', 'legacy'] }
+          }).from(container).save().then(function () {
+            document.body.removeChild(container);
+            generating.classList.remove('show');
+            document.getElementById('rc_pdfBtn').disabled = false;
+            document.getElementById('rc_printBtn').disabled = false;
+            closeReportChoice();
+            showToast('PDF downloaded.');
+          }).catch(function () {
+            document.body.removeChild(container);
+            generating.classList.remove('show');
+            document.getElementById('rc_pdfBtn').disabled = false;
+            document.getElementById('rc_printBtn').disabled = false;
+            showToast('Could not generate the PDF.', true);
+          });
+        }, 50);
       });
     }
 
     var REPORT_STYLES = '' +
       '@page{margin:14mm;}' +
       '*{box-sizing:border-box;}' +
-      'body{font-family:Arial,Helvetica,sans-serif;color:#1C2333;margin:0;padding:24px;font-size:12.5px;}' +
+      '#pdfReportRoot{font-family:Arial,Helvetica,sans-serif;color:#1C2333;font-size:12.5px;background:#ffffff;}' +
       '.report-header{display:flex;justify-content:space-between;align-items:flex-start;border-bottom:2px solid #1C2333;padding-bottom:14px;margin-bottom:18px;}' +
       '.report-brand{display:flex;gap:12px;align-items:center;}' +
       '.report-brand .mark{width:38px;height:38px;border:2px solid #1C2333;border-radius:8px;display:flex;align-items:center;justify-content:center;font-weight:bold;font-size:14px;}' +
@@ -2530,6 +2586,15 @@
       '.print-toolbar button{font-family:Arial,sans-serif;font-size:12px;padding:8px 16px;border-radius:6px;border:1px solid #1C2333;background:#1C2333;color:#fff;cursor:pointer;margin-right:8px;}' +
       '.print-toolbar button.secondary{background:#fff;color:#1C2333;}' +
       '@media print{.print-toolbar{display:none;}}';
+
+    // Separate style block used only by the "Print" (new-tab) report, which
+    // DOES have a real <body> element -- so it keeps the original body
+    // selector for that path.
+    var PRINT_PAGE_STYLES = '' +
+      '@page{margin:14mm;}' +
+      '*{box-sizing:border-box;}' +
+      'body{font-family:Arial,Helvetica,sans-serif;color:#1C2333;margin:0;padding:24px;font-size:12.5px;}' +
+      REPORT_STYLES.replace(/#pdfReportRoot\{[^}]*\}/, '');
 
     function buildReportBody(entries, title) {
       var groups = buildCustomerGroups(entries)
@@ -2602,7 +2667,7 @@
       var body = buildReportBody(entries, title);
       return '' +
         '<!DOCTYPE html><html><head><meta charset="utf-8"><title>' + escapeHtml(title) + '</title>' +
-        '<style>' + REPORT_STYLES + '</style></head><body>' +
+        '<style>' + PRINT_PAGE_STYLES + '</style></head><body>' +
           '<div class="print-toolbar">' +
             '<button onclick="window.print()">Print</button>' +
             '<button class="secondary" onclick="window.close()">Close</button>' +
